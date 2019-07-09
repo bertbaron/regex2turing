@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+      <title>Regular Expression to Turing Machine compiler</title>
+      <meta charset="UTF-8">
+      <link rel="stylesheet" href="styles.css">
+      <script src="turingregex.js" type="text/javascript" />
+      </script>
+</head>
+
+<body>
+      <div class="container">
+            <div class="row">
+                  <label for="expression">Expression<span class="required">*</span></label><input id="expression" name="expression" type="text" placeholder="expression" value="ab" />
+            </div>
+            <div class="row">
+                  <label for="alphabet">Alphabet</label><input id="alphabet" name="alphabet" type="text" placeholder="alphabet" />
+            </div>
+            <div class="row">
+                  <label for="accept">Custom accept state</label><input id="accept" name="accept" type="text" placeholder="accept" />
+            </div>
+            <div class="row">
+                  <label for="reject">Reject state (requires alphabet)</label><input id="reject" name="reject" type="text" placeholder="reject" />
+            </div>
+            <div class="row">
+                  <input type="button" onclick="compile();" name="compile" value="Compile" />
+            </div>
+            <div class="row">
+                  <span>Target: <a href="https://turingmachinesimulator.com/" target="_blank">Turing Machine Simulator</a></span>
+            </div>
+            <div class="row">
+                  <div id="error"></div>
+            </div>
+            <div class="row output-area">
+                  <span class="copy-icon" title="copy to clipboard" onclick="copyToClipboard()">⎘</span>
+                  <textarea id="output" readonly></textarea>
+            </div>
+      </div>
+</body>
+
+</html>
