@@ -14,6 +14,9 @@ correctCases = [
     ['abc', '[^ab]+b', 'a', 'b', 'c', 'ab', 'bb', 'cb', 'ccb'],
     [null, '\\*|\\\\', '*', '\\', '\\*', '\\\\*'],
     ['abc', 'a.*b', 'a', 'b', 'ab', 'aab', 'ac', 'acb', 'accb'],
+    [null, 'ab{3}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
+    [null, 'ab{2,}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
+    [null, 'ab{2,4}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
 ]
 
 count = 0

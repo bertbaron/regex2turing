@@ -47,6 +47,22 @@ class NFAState {
         let visited = new Set([])
         this.doSetOutput(next, visited)
     }
+
+    doClone(clonedMap) {
+        if (clonedMap.has(this)) {
+            return clonedMap.get(this)
+        }
+        let clonedChildren = []
+        let clone = new NFAState(this.char, clonedChildren, this.open)
+        clonedMap.set(this, clone)
+        for (let child of this.children) {
+            clonedChildren.push(child.doClone(clonedMap))
+        }
+        return clone
+    }
+    clone() {
+        return this.doClone(new Map())
+    }
 }
 
 class DFAState {
@@ -88,7 +104,7 @@ class Parser {
             let c = this.expr.charAt(i)
             if (c == '\\') {
                 c = this.expr.charAt(++i)
-                if (i==this.expr.length) {
+                if (i == this.expr.length) {
                     fail('Expected escaped character but end of input found')
                 }
                 pushtoken(c, i)
@@ -105,11 +121,10 @@ class Parser {
                 case ']':
                 case '.':
                 case '^':
-                    pushtoken('.' + c, i)
-                    break
                 case '{':
                 case '}':
-                    this.fail(`Unsupported operator: ${c}`)
+                    pushtoken('.' + c, i)
+                    break
                 default:
                     pushtoken(c, i)
                     break;
@@ -203,6 +218,46 @@ class Parser {
         this.fail(`Unexpected token: ${next}`)
     }
 
+    parseRepetitionModifier(p1) {
+        let modifier = ''
+        let token = this.pop()
+        while (token != '.}') {
+            modifier += token
+            token = this.pop()
+        }
+        let match = /^(\d+)(,(\d+)?)?$/.exec(modifier)
+        if (!match) {
+            fail(`Invalid repetition modifier: {${token}}`)
+        }
+        let start = parseInt(match[1])
+        let end = start
+        if (match[2] && !match[3]) {
+            end = null // infiniy
+        } else if (match[3]) {
+            end = parseInt(match[3])
+        }
+        let expr = NFAState.lambda([], true)
+        let lastElement = expr
+        for (let i=0; i<start; i++) {
+            let clone = p1.clone()
+            expr.setOutput(clone)
+            lastElement = clone
+        }
+        if (end) {
+            let tail = NFAState.lambda([], true)
+            for (let i=start; i<end; i++) {
+                let clone = p1.clone()
+                clone.setOutput(tail)
+                tail = NFAState.lambda([clone], true)
+            }
+            expr.setOutput(tail)
+        } else {
+            let q = NFAState.lambda([lastElement], true)
+            expr.setOutput(q)
+        }
+        return expr
+    }
+
     parseUnary() {
         let p1 = this.parsePrimary()
         let next = this.peek()
@@ -222,6 +277,10 @@ class Parser {
             case '.?': {
                 this.pop()
                 return NFAState.lambda([p1], true)
+            }
+            case '.{': {
+                this.pop()
+                return this.parseRepetitionModifier(p1)
             }
         }
         return p1
@@ -415,7 +474,7 @@ function toTuringMachine(dfa, expression) {
             for (let symbol of alphabet) {
                 if (!symbols.has(symbol)) {
                     output += `${prefix}${state.id},${symbol}\n`
-                    output += `${rejectState},${symbol},-\n`        
+                    output += `${rejectState},${symbol},-\n`
                 }
             }
         }
