@@ -1,50 +1,39 @@
-.container {
-	margin:10px auto;
-	max-width: 400px;
-	padding: 20px 12px 10px 20px;
-	font: 13px "Lucida Sans Unicode", "Lucida Grande", sans-serif;
-}
-div.row {
-	padding: 0;
+.clipboard {
 	display: block;
-	list-style: none;
-	margin: 10px 0 0 0;
-}
-label{
-	margin:0 0 3px 0;
-	padding:0px;
-	display:block;
-	font-weight: bold;
-}
-
-input[type=submit],  input[type=button]{
-	background: #4B99AD;
-	padding: 8px 15px 8px 15px;
-	border: none;
-	color: #fff;
-}
-.required{
-	color:red;
-}
-
-#error {
-    color: red;
-}
-
-.output-area {
 	position: relative;
+	float: right;
 }
-#output {
-    width: 100%;
-    height: 400px;
-    font-family: monospace;
+
+.btn-clipboard {
+	position: absolute;
+	top: .5rem;
+	right: .5rem;
+	z-index: 10;
+	display: block;
+	padding: .25rem .5rem;
+	font-size: 75%;
+	color: #818a91;
+	cursor: pointer;
+	background-color: transparent;
+	border: 0;
+	border-radius: .25rem;
+}
+
+.btn-clipboard:hover {
+	color: #fff;
+	background-color: #027de7;
+}
+
+.code {
+	/* height: 100%; */
+	overflow-y: scroll;
+}
+
+.resultpane {
 	padding: 10px;
 }
-.copy-icon {
-	position: absolute;
-	font-size: 300%;
-	color: darkgray;
-	right: 0px;
-	top: 0px;
-	cursor: pointer;
+
+.hidden {
+	visibility: hidden;
+	height: 0;
 }

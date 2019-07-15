@@ -460,7 +460,7 @@ function toTuringMachine(dfa, expression) {
 
     let output = `name: Accepts inputs matching regex '${expression.expression}'\n`
     output += `init: ${prefix}0\n`
-    output += `accept: ${acceptState}`
+    output += `accept: ${acceptState}\n`
     output += '\n'
     for (let state of dfa) {
         let symbols = new Set([])
@@ -487,7 +487,9 @@ function toTuringMachine(dfa, expression) {
     return output
 }
 function compile() {
-    document.getElementById('error').style.visibility = 'hidden'
+    var errorElement = document.getElementById("error");
+    errorElement.classList.remove("show");
+
     document.getElementById('output').value = ''
 
     let expression = document.getElementById('expression').value
@@ -500,17 +502,16 @@ function compile() {
         let dfa = compileExpression(expr)
         result = toTuringMachine(dfa, expr)
     } catch (err) {
-        document.getElementById('error').innerHTML = err
-        document.getElementById('error').style.visibility = 'visible'
+        errorElement.innerHTML = err
+        errorElement.classList.add("show");
         return
     }
     document.getElementById('output').value = result
 }
 
 function copyToClipboard() {
-    var copyText = document.getElementById('output');
-    copyText.select();
-    document.execCommand("copy");
+    let text = document.getElementById('output').value
+    navigator.clipboard.writeText(text)
 }
 
 if (typeof (module) !== 'undefined') {

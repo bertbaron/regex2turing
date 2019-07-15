@@ -1,46 +1,75 @@
+<!doctype html>
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
       <title>Regular Expression to Turing Machine compiler</title>
-      <meta charset="UTF-8">
+      <meta charset="utf-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+
+      <!-- Bootstrap CSS -->
+      <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
+            integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
       <link rel="stylesheet" href="styles.css">
-      <script src="turingregex.js" type="text/javascript" />
-      </script>
+      <script src="turingregex.js" type="text/javascript"></script>
 </head>
 
 <body>
+      <div class="jumbotron text-center">
+            <h1 class="display-4">Regular expression <small>to</small> Turing Machine <small>compiler</small></h1>
+      </div>
       <div class="container">
-            <div class="row">
-                  <label for="expression">Expression<span class="required">*</span></label><input id="expression" name="expression" type="text" placeholder="expression" value="ab" />
+            <div>
+                  <form>
+                        <div class="form-row">
+                              <div class="form-group col-md-6">
+                                    <label for="expression">Expression</label>
+                                    <input type="text" class="form-control" id="expression" placeholder="expression"
+                                          required />
+                              </div>
+                              <div class="form-group col-md-6">
+                                    <label for="alphabet">Alphabet</label>
+                                    <input type="text" class="form-control" id="alphabet" placeholder="alphabet" />
+                              </div>
+                        </div>
+                        <div class="form-row">
+                              <div class="form-group col-md-6">
+                                    <label for="accept">Custom accept state</label>
+                                    <input type="text" class="form-control" id="accept" placeholder="accept" />
+                              </div>
+                              <div class="form-group col-md-6">
+                                    <label for="reject">Reject state (requires alphabet)</label>
+                                    <input type="text" class="form-control" id="reject" placeholder="reject" />
+                              </div>
+                        </div>
+                        <div class="form-row">
+                              <button type="button" class="btn btn-primary btn-success col-md-12"
+                                    onclick="compile();">Compile</button>
+                        </div>
+                  </form>
             </div>
-            <div class="row">
-                  <label for="alphabet">Alphabet</label><input id="alphabet" name="alphabet" type="text" placeholder="alphabet" />
-            </div>
-            <div class="row">
-                  <label for="accept">Custom accept state</label><input id="accept" name="accept" type="text" placeholder="accept" />
-            </div>
-            <div class="row">
-                  <label for="reject">Reject state (requires alphabet)</label><input id="reject" name="reject" type="text" placeholder="reject" />
-            </div>
-            <div class="row">
-                  <input type="button" onclick="compile();" name="compile" value="Compile" />
-            </div>
-            <div class="row">
-                  <span>Target: <a href="https://turingmachinesimulator.com/" target="_blank">Turing Machine Simulator</a></span>
-            </div>
-            <div class="row">
-                  <div id="error"></div>
-            </div>
-            <div class="row output-area">
-                  <span class="copy-icon" title="copy to clipboard" onclick="copyToClipboard()">⎘</span>
-                  <textarea id="output" readonly></textarea>
-            </div>
-            <div class="note">
-                  <span>Soure code: <a href="https://github.com/bertbaron/regex2turing">https://github.com/bertbaron/regex2turing</a></span>
-            </div>
-            <div class="note">
-                  <span>I would be more than happy to accept any merge request that improves the style and usability on this page</span>
+            <div class="resultpane">
+                  <div id="error" class="row alert alert-danger collapse" role="alert"></div>
+                  <div class="row">
+                        <label>Target: <a href="https://turingmachinesimulator.com/" target="_blank">Turing
+                                    Machine
+                                    Simulator</a></label>
+                  </div>
+                  <div class="clipboard">
+                        <button class="btn-clipboard" title="" data-original-title="Copy to clipboard"
+                              onclick="copyToClipboard()">Copy</button>
+                  </div>
+                  <div class="row output-area">
+                        <textarea class="md-textarea form-control" rows=15 id="output" readonly></textarea>
+                  </div>
+                  <div class="row note">
+                        <span>Soure code: <a
+                                    href="https://github.com/bertbaron/regex2turing">https://github.com/bertbaron/regex2turing</a></span>
+                  </div>
+                  <div class="row note">
+                        <span>Feel free to submit issues or make feature requests</span>
+                  </div>
+                  <textarea id="invisibleClipboard" class="collapse"></textarea>
             </div>
       </div>
 </body>
