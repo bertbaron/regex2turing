@@ -1,3 +1,19 @@
+/*Mobile CSS*/
+@media (max-width: 550px){
+	.jumbotron h1 {
+	  font-size: 2rem;
+	  line-height: 0.7;
+	}
+	.jumbotron .lead {
+	  font-size: 1rem;
+	  margin-bottom: 0;
+	}
+}
+
+.jumbotron {
+	padding: 2rem 1rem;
+}
+
 .clipboard {
 	display: block;
 	position: relative;
