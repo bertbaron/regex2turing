@@ -408,6 +408,11 @@ function minimizeDfa(dfa) {
     }
     newDfa = newDfa.filter(s => s)
 
+    // renumber states
+    for (let i=0; i<newDfa.length; i++) {
+        newDfa[i].id = i
+    }
+
     return newDfa
 }
 
