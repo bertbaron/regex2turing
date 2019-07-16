@@ -23,7 +23,7 @@
 .btn-clipboard {
 	position: absolute;
 	top: .5rem;
-	right: .5rem;
+	right: 0;
 	z-index: 10;
 	display: block;
 	padding: .25rem .5rem;
@@ -52,4 +52,15 @@
 .hidden {
 	visibility: hidden;
 	height: 0;
+}
+
+#output {
+	outline: none;
+	background-color: white;
+	border-top: 2px solid #ced4da;;
+	border-bottom: 2px solid #ced4da;;
+	border-left: 0;
+	border-right: 0;
+	border-radius: 0;
+	margin-bottom: 0.4rem;
 }
