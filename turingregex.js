@@ -132,6 +132,9 @@ class Parser {
         }
         this.index = 0
     }
+    clean(t) {
+        return t.length > 1 ? t.substring(1) : t
+    }
     fail(message) {
         let idx = Math.min(this.index, this.tokens.length - 1)
         let index = this.indices.length > 0 ? this.indices[idx] : 0
@@ -141,7 +144,7 @@ class Parser {
         return this.index == this.tokens.length
     }
     checkEndOfInput(expected) {
-        if (this.end()) this.fail(`Unexpected input, expected ${expected}`)
+        if (this.end()) this.fail(`Unexpected end of input, expected ${expected}`)
     }
     peek() {
         return this.tokens[this.index]
@@ -151,10 +154,11 @@ class Parser {
         return this.tokens[this.index++]
     }
     popExpect(expecteds) {
-        this.checkEndOfInput(`one of ${expecteds}`)
+        let exp = expecteds.length == 1 ? this.clean(expecteds[0]) : 'one of ' + expecteds.map(this.clean).join(', ')
+        this.checkEndOfInput(`${exp}`)
         let token = this.peek()
         if (!expecteds.includes(token)) {
-            this.fail(`Unexpected token: ${token}, expected one of ${expecteds}`)
+            this.fail(`Unexpected token: ${this.clean(token)}, expected ${exp}`)
         }
         return this.tokens[this.index++]
     }
@@ -177,7 +181,7 @@ class Parser {
         }
         while (next != '.]') {
             if (next.length > 1) {
-                this.fail(`Operator not allowed in character class: ${next}`)
+                this.fail(`Operator not allowed in character class: ${this.clean(next)}`)
             }
             characters.add(next)
             next = this.pop()
@@ -215,7 +219,7 @@ class Parser {
             }
             return NFAState.lambda(children, false)
         }
-        this.fail(`Unexpected token: ${next}`)
+        this.fail(`Unexpected token: ${this.clean(next)}`)
     }
 
     parseRepetitionModifier(p1) {
@@ -227,7 +231,7 @@ class Parser {
         }
         let match = /^(\d+)(,(\d+)?)?$/.exec(modifier)
         if (!match) {
-            fail(`Invalid repetition modifier: {${token}}`)
+            this.fail(`Invalid repetition modifier: {${modifier}}`)
         }
         let start = parseInt(match[1])
         let end = start
