@@ -20,35 +20,35 @@
             <p class="lead">Compiles regular expressions to Turing machines</p>
       </div>
       <div class="container">
-            <div>
-                  <form>
-                        <div class="form-row">
-                              <div class="form-group col-md-6">
-                                    <label for="expression">Expression</label>
-                                    <input type="text" class="form-control" id="expression" placeholder="expression"
-                                          required />
-                              </div>
-                              <div class="form-group col-md-6">
-                                    <label for="alphabet">Alphabet</label>
-                                    <input type="text" class="form-control" id="alphabet" placeholder="alphabet" />
-                              </div>
+            <form>
+                  <div class="form-row">
+                        <div class="form-group col-md-6">
+                              <label for="expression">Expression</label>
+                              <input type="text" class="form-control" id="expression" placeholder="expression"
+                                    required />
                         </div>
-                        <div class="form-row">
-                              <div class="form-group col-md-6">
-                                    <label for="accept">Custom accept state</label>
-                                    <input type="text" class="form-control" id="accept" placeholder="accept" />
-                              </div>
-                              <div class="form-group col-md-6">
-                                    <label for="reject">Reject state (requires alphabet)</label>
-                                    <input type="text" class="form-control" id="reject" placeholder="reject" />
-                              </div>
+                        <div class="form-group col-md-6">
+                              <label for="alphabet">Alphabet</label>
+                              <input type="text" class="form-control" id="alphabet" placeholder="alphabet" />
                         </div>
-                        <div class="form-row">
+                  </div>
+                  <div class="form-row">
+                        <div class="form-group col-md-6">
+                              <label for="accept">Custom accept state</label>
+                              <input type="text" class="form-control" id="accept" placeholder="accept" />
+                        </div>
+                        <div class="form-group col-md-6">
+                              <label for="reject">Reject state (requires alphabet)</label>
+                              <input type="text" class="form-control" id="reject" placeholder="reject" />
+                        </div>
+                  </div>
+                  <div class="form-row">
+                        <div class="form-group col-md-12">
                               <button type="button" class="btn btn-primary btn-success col-md-12"
                                     onclick="compile();">Compile</button>
                         </div>
-                  </form>
-            </div>
+                  </div>
+            </form>
             <div class="resultpane">
                   <div id="error" class="row alert alert-danger collapse" role="alert"></div>
                   <div class="row">
