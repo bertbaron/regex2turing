@@ -11,6 +11,9 @@
       <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css"
             integrity="sha384-ggOyR0iXCbMQv3Xipma34MD+dH/1fQ784/j6cY/iJTQUOhcWr7x9JvoRxT2MZw1T" crossorigin="anonymous">
       <link rel="stylesheet" href="styles.css">
+      <script src="https://code.jquery.com/jquery-3.3.1.slim.min.js" integrity="sha384-q8i/X+965DzO0rT7abK41JStQIAqVgRVzpbzo5smXKp4YfRvH+8abtTE1Pi6jizo" crossorigin="anonymous"></script>
+      <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.7/umd/popper.min.js" integrity="sha384-UO2eT0CpHqdSJQ6hJty5KVphtPhzWj9WO1clHTMGa3JDZwrnQq4sF86dIHNDz0W1" crossorigin="anonymous"></script>
+      <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.3.1/js/bootstrap.min.js" integrity="sha384-JjSmVgyd0p3pXB1rRibZUAYoIIy6OrQ6VrjIEaFf/nJGzIxFDsf4x0xIM+B07jRM" crossorigin="anonymous"></script>
       <script src="turingregex.js" type="text/javascript"></script>
 </head>
 
@@ -20,7 +23,7 @@
             <p class="lead">Compiles regular expressions to Turing machines</p>
       </div>
       <div class="container">
-            <form>
+            <form action="#" onsubmit="compile();return false">
                   <div class="form-row">
                         <div class="form-group col-md-6">
                               <label for="expression">Expression</label>
@@ -32,42 +35,54 @@
                               <input type="text" class="form-control" id="alphabet" placeholder="alphabet" />
                         </div>
                   </div>
-                  <div class="form-row">
-                        <div class="form-group col-md-6">
-                              <label for="accept">Custom accept state</label>
-                              <input type="text" class="form-control" id="accept" placeholder="accept" />
+                  <div class="form-row collapse-ruler"><div class="col"><hr class="hr-advanced"></div><button class="btn-advanced col-auto" data-toggle="collapse" data-target="#advanced">Advanced</button></div>
+                  <div id="advanced" class="collapse">
+                        <div class="form-row">
+                              <div class="form-group col-md-6">
+                                    <label for="accept">Custom accept state</label>
+                                    <input type="text" class="form-control" id="accept" placeholder="accept" />
+                              </div>
+                              <div class="form-group col-md-6">
+                                    <label for="reject">Reject state (requires alphabet)</label>
+                                    <input type="text" class="form-control" id="reject" placeholder="reject" />
+                              </div>
                         </div>
-                        <div class="form-group col-md-6">
-                              <label for="reject">Reject state (requires alphabet)</label>
-                              <input type="text" class="form-control" id="reject" placeholder="reject" />
+                        <div class="form-row">
+                              <div class="form-group col-md-6">
+                                    <div class="form-check">
+                                          <input type="checkbox" class="form-check-input" id="find" />
+                                          <label for="find" class="form-check-label">find (non-greedy)</label>
+                                    </div>
+                              </div>
                         </div>
                   </div>
                   <div class="form-row">
-                        <div class="form-group col-md-12">
-                              <button type="button" class="btn btn-primary btn-success col-md-12"
-                                    onclick="compile();">Compile</button>
+                              <div class="form-group col-md-12">
+                                    <button type="submit" class="btn btn-primary btn-success col-md-12">Compile</button>
+                              </div>
                         </div>
-                  </div>
             </form>
             <div class="resultpane">
-                  <div id="error" class="row alert alert-danger collapse" role="alert"></div>
-                  <div class="row">
+                  <div id="error" class="row col alert alert-danger collapse" role="alert"></div>
+                  <div class="row col">
                         <label>Target: <a href="https://turingmachinesimulator.com/" target="_blank">Turing
                                     Machine
                                     Simulator</a></label>
                   </div>
                   <div class="clipboard">
-                        <button class="btn-clipboard" title="" data-original-title="Copy to clipboard"
+                        <button class="btn-clipboard" title="Copy to clipboard" data-toggle="tooltip"
                               onclick="copyToClipboard()">Copy</button>
                   </div>
-                  <div class="row output-area">
-                        <textarea class="md-textarea form-control" rows=15 id="output" readonly wrap="off"></textarea>
+                  <div class="row">
+                        <div class="col">
+                              <textarea class="md-textarea form-control" rows=15 id="output" readonly wrap="off"></textarea>
+                        </div>
                   </div>
-                  <div class="row note">
+                  <div class="row col note">
                         <span>Soure code: <a
                                     href="https://github.com/bertbaron/regex2turing">https://github.com/bertbaron/regex2turing</a></span>
                   </div>
-                  <div class="row note">
+                  <div class="row col note">
                         <span>Feel free to submit issues or make feature requests</span>
                   </div>
                   <textarea id="invisibleClipboard" class="collapse"></textarea>

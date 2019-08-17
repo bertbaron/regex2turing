@@ -29,7 +29,6 @@
 	padding: .25rem .5rem;
 	font-size: 75%;
 	color: #818a91;
-	cursor: pointer;
 	background-color: transparent;
 	border: 0;
 	border-radius: .25rem;
@@ -40,14 +39,37 @@
 	background-color: #027de7;
 }
 
+.btn-advanced {
+	height: 1.5rem;
+	font-size: 75%;
+	color: #818a91;
+	padding: .25rem .5rem;
+	background-color: transparent;
+	border: 0;
+	border-radius: .25rem;
+	margin-top: 0.25rem;
+}
+
+.btn-advanced:hover {
+	color: #fff;
+	background-color: #027de7;
+}
+
+.collapse-ruler {
+	margin-top: -1rem;
+}
+.collapse-ruler .col {
+	padding-right: 0;
+}
+
 .code {
 	/* height: 100%; */
 	overflow-y: scroll;
 }
 
-.resultpane {
+/* .resultpane {
 	padding: 10px;
-}
+} */
 
 .hidden {
 	visibility: hidden;
