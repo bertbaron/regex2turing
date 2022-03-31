@@ -549,8 +549,7 @@ if (typeof (module) !== 'undefined') {
     };
 }
 
-
-function runFromCLI(expr, alphabet) {
+function cliCompile(expr, alphabet) {
     setDebug(true)
     let expression = new Expression(expr, alphabet, null, null, false)
     let dfa = compileExpression(expression)
@@ -558,7 +557,7 @@ function runFromCLI(expr, alphabet) {
     console.log(`Turing machine:\n${turing}`)
 }
 
-if (typeof (process) !== 'undefined' && process.argv[1].endsWith('turingregex.js')) {
+function runFromCLI() {
     // called directly with node.js
     if (process.argv.length <= 2) {
         console.log("Usage: node turingregex.js <expression> [alphabet]")
@@ -572,11 +571,19 @@ if (typeof (process) !== 'undefined' && process.argv[1].endsWith('turingregex.js
     if (process.argv.length > 3) {
         alphabet = process.argv[3]
     }
-    runFromCLI(expr, alphabet)
-} else {
-    // From browser
-    console.log('Hello world')
+    cliCompile(expr, alphabet)
+}
+
+if (typeof (process) == 'undefined') {
+    console.log('turingregex running from browser')
     $(function () {
         $('[data-toggle="tooltip"]').tooltip()
     })
+} else {
+    if (process.argv[1].endsWith('turingregex.js')) {
+        console.log('turingregex running from console');
+        runFromCLI()
+    } else {
+        console.log('turingregex loaded as library');
+    }
 }
