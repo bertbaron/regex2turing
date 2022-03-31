@@ -1,5 +1,6 @@
 var turingregex = require('./turingregex.js');
 
+// [ alphabet, regex, example...]
 correctCases = [
     [null, 'a', 'a', 'b', '', 'aa', 'bb', 'ab'],
     [null, 'ab|ac', 'a', 'b', 'ab', 'ac', 'ba', 'ca', 'abc'],
@@ -17,6 +18,7 @@ correctCases = [
     [null, 'ab{3}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
     [null, 'ab{2,}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
     [null, 'ab{2,4}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
+    [null, '[a-c]', 'a', 'b', 'c'],
 ]
 
 count = 0

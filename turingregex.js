@@ -95,9 +95,17 @@ class Parser {
         this.index = 0
     }
 
+    /**
+     * Returns an array of tokens. Each symbol is a single character.
+     * All special tokens are strings of length 2 where the first character is a dot.
+     * Example:
+     *    a.*\.b
+     * results in the tokens:
+     *    ['a', '..', '.*', '.', 'b']
+     */
     tokenize() {
         let self = this
-        let pushtoken = function (token, index) {
+        let pushToken = function (token, index) {
             self.tokens.push(token)
             self.indices.push(index)
         }
@@ -109,52 +117,45 @@ class Parser {
                 if (i == this.expr.length) {
                     fail('Expected escaped character but end of input found')
                 }
-                pushtoken(c, i)
+                pushToken(c, i)
                 continue
             }
-            switch (c) {
-                case '|':
-                case '(':
-                case ')':
-                case '*':
-                case '+':
-                case '?':
-                case '[':
-                case ']':
-                case '.':
-                case '^':
-                case '{':
-                case '}':
-                    pushtoken('.' + c, i)
-                    break
-                default:
-                    pushtoken(c, i)
-                    break;
+            if ('|()*+?[].^{}'.indexOf(c) > -1) {
+                pushToken('.' + c, i)
+            } else {
+                pushToken(c, i)
             }
         }
         this.index = 0
     }
+
     clean(t) {
         return t.length > 1 ? t.substring(1) : t
     }
+
     fail(message) {
         let idx = Math.min(this.index, this.tokens.length - 1)
         let index = this.indices.length > 0 ? this.indices[idx] : 0
         throw `Parsing error at index ${index}: ${message}`
     }
+
     end() {
         return this.index == this.tokens.length
     }
+
     checkEndOfInput(expected) {
         if (this.end()) this.fail(`Unexpected end of input, expected ${expected}`)
     }
+
     peek() {
         return this.tokens[this.index]
     }
+
     pop() {
         this.checkEndOfInput('more input')
         return this.tokens[this.index++]
     }
+
     popExpect(expecteds) {
         let exp = expecteds.length == 1 ? this.clean(expecteds[0]) : 'one of ' + expecteds.map(this.clean).join(', ')
         this.checkEndOfInput(`${exp}`)
@@ -173,9 +174,8 @@ class Parser {
     }
 
     parseCharacterClass() {
-        // let expr = null
         let next = this.pop()
-        let characters = new Set([])
+        let characters = []
         let complement = false
         if (next == '.^') {
             complement = true
@@ -185,8 +185,26 @@ class Parser {
             if (next.length > 1) {
                 this.fail(`Operator not allowed in character class: ${this.clean(next)}`)
             }
-            characters.add(next)
-            next = this.pop()
+            if (next == '-') {
+                let start = characters.pop(next)
+                next = this.pop()
+                if (next.length > 1) {
+                    this.fail(`Operator not allowed in character class: ${this.clean(next)}`)
+                }
+                let size=0
+                for (let c = start; c <= next; c=String.fromCharCode(c.charCodeAt(0) + 1)) {
+                    characters.push(c)
+                    size++
+                    if (size>1000) {
+                        this.fail(`Character range too large: [${start}-${next}]`)
+                    }
+                }
+                next = this.pop()
+    
+            } else {
+                characters.push(next)
+                next = this.pop()
+            }
         }
         if (characters.length == 0) {
             this.fail(`Empty character class is not allowed`)
@@ -196,8 +214,9 @@ class Parser {
             characters.forEach(c => alphabet.delete(c))
             characters = alphabet
         }
-        return NFAState.lambda(Array.from(characters).map(c => NFAState.terminal(c)), false)
+        return NFAState.lambda(Array.from(new Set(characters)).map(c => NFAState.terminal(c)), false)
     }
+
     parsePrimary() {
         this.checkEndOfInput('a primary')
         let next = this.peek()
