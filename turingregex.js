@@ -85,48 +85,16 @@ class DFAState {
     }
 }
 
+const TOKENSTATE_GLOBAL=0
+const TOKENSTATE_CHARCLASS=1
 class Parser {
     constructor(expression) {
         this.expr = expression.expression
         if (expression.find) this.expr = `.*${this.expr}`
         this.alphabet = expression.alphabet
-        this.tokens = []
-        this.indices = []
         this.index = 0
-    }
-
-    /**
-     * Returns an array of tokens. Each symbol is a single character.
-     * All special tokens are strings of length 2 where the first character is a dot.
-     * Example:
-     *    a.*\.b
-     * results in the tokens:
-     *    ['a', '..', '.*', '.', 'b']
-     */
-    tokenize() {
-        let self = this
-        let pushToken = function (token, index) {
-            self.tokens.push(token)
-            self.indices.push(index)
-        }
-        for (let i = 0; i < this.expr.length; i++) {
-            this.index = i // for error message
-            let c = this.expr.charAt(i)
-            if (c == '\\') {
-                c = this.expr.charAt(++i)
-                if (i == this.expr.length) {
-                    fail('Expected escaped character but end of input found')
-                }
-                pushToken(c, i)
-                continue
-            }
-            if ('|()*+?[].^{}'.indexOf(c) > -1) {
-                pushToken('.' + c, i)
-            } else {
-                pushToken(c, i)
-            }
-        }
-        this.index = 0
+        this.token = null
+        this.tokenState=TOKENSTATE_GLOBAL
     }
 
     clean(t) {
@@ -134,36 +102,62 @@ class Parser {
     }
 
     fail(message) {
-        let idx = Math.min(this.index, this.tokens.length - 1)
-        let index = this.indices.length > 0 ? this.indices[idx] : 0
-        throw `Parsing error at index ${index}: ${message}`
+        throw `Parsing error at index ${this.index}: ${message}`
     }
 
     end() {
-        return this.index == this.tokens.length
+        return this.token == null && this.index == this.expr.length
     }
 
     checkEndOfInput(expected) {
         if (this.end()) this.fail(`Unexpected end of input, expected ${expected}`)
     }
 
+    fetchNextToken() {
+        let operators = this.tokenState == TOKENSTATE_GLOBAL ? '|()*+?[].{}' : '[]-^'
+        if (this.index == this.expr.length) {
+            fail('Assertion error: end of input')
+        }
+        let c = this.expr.charAt(this.index++)
+        if (c == '\\') {
+            if (this.index == this.expr.length) {
+                fail('Expected escaped character but end of input found')
+            }
+            c = this.expr.charAt(this.index++)
+            this.token = c
+        } else if (operators.indexOf(c) > -1) {
+            this.token = '.' + c
+        } else {
+            this.token = c
+        }
+        if (this.tokenState == TOKENSTATE_GLOBAL && this.token == '.[') {
+            this.tokenState = TOKENSTATE_CHARCLASS
+        }
+        if (this.tokenState == TOKENSTATE_CHARCLASS && this.token == '.]') {
+            this.tokenState = TOKENSTATE_GLOBAL
+        }
+    }
+
     peek() {
-        return this.tokens[this.index]
+        if (this.token == null && this.index<this.expr.length) this.fetchNextToken()
+        return this.token
     }
 
     pop() {
         this.checkEndOfInput('more input')
-        return this.tokens[this.index++]
+        let token = this.peek()
+        this.token = null
+        return token
     }
 
-    popExpect(expecteds) {
-        let exp = expecteds.length == 1 ? this.clean(expecteds[0]) : 'one of ' + expecteds.map(this.clean).join(', ')
+    popExpect(expected) {
+        let exp = expected.length == 1 ? this.clean(expected[0]) : 'one of ' + expected.map(this.clean).join(', ')
         this.checkEndOfInput(`${exp}`)
         let token = this.peek()
-        if (!expecteds.includes(token)) {
+        if (!expected.includes(token)) {
             this.fail(`Unexpected token: ${this.clean(token)}, expected ${exp}`)
         }
-        return this.tokens[this.index++]
+        return this.pop()
     }
 
     getAlphabet(reason) {
@@ -182,14 +176,11 @@ class Parser {
             next = this.pop()
         }
         while (next != '.]') {
-            if (next.length > 1) {
-                this.fail(`Operator not allowed in character class: ${this.clean(next)}`)
-            }
-            if (next == '-') {
+            if (next == '.-') {
                 let start = characters.pop(next)
                 next = this.pop()
                 if (next.length > 1) {
-                    this.fail(`Operator not allowed in character class: ${this.clean(next)}`)
+                    this.fail(`Operator not allowed in character class (range): ${this.clean(next)}`)
                 }
                 let size=0
                 for (let c = start; c <= next; c=String.fromCharCode(c.charCodeAt(0) + 1)) {
@@ -200,8 +191,11 @@ class Parser {
                     }
                 }
                 next = this.pop()
-    
             } else {
+                if (next == '.^') next = '^'
+                if (next.length > 1) {
+                    this.fail(`Operator not allowed in character class: ${this.clean(next)}`)
+                }
                 characters.push(next)
                 next = this.pop()
             }
@@ -332,8 +326,8 @@ class Parser {
     }
 
     parse() {
-        this.tokenize()
-        debug && console.log(`Tokens: ${this.tokens}`)
+        // this.tokenize()
+        // debug && console.log(`Tokens: ${this.tokens}`)
         let result = this.parseExpression()
         if (!this.end) {
             this.fail('Unexpected trailing characters')
@@ -600,9 +594,9 @@ if (typeof (process) == 'undefined') {
     })
 } else {
     if (process.argv[1].endsWith('turingregex.js')) {
-        console.log('turingregex running from console');
+        console.log('turingregex running from console')
         runFromCLI()
     } else {
-        console.log('turingregex loaded as library');
+        console.log('turingregex loaded as library')
     }
 }

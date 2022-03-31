@@ -1,6 +1,6 @@
 var turingregex = require('./turingregex.js');
 
-// [ alphabet, regex, example...]
+// [ alphabet, regex, examples...]
 correctCases = [
     [null, 'a', 'a', 'b', '', 'aa', 'bb', 'ab'],
     [null, 'ab|ac', 'a', 'b', 'ab', 'ac', 'ba', 'ca', 'abc'],
@@ -13,12 +13,17 @@ correctCases = [
     [null, 'aa?b', 'a', 'ab', 'aab', 'aaab', 'b'],
     [null, '[abc]+', 'a', 'aa', 'ab', 'abc', 'd'],
     ['abc', '[^ab]+b', 'a', 'b', 'c', 'ab', 'bb', 'cb', 'ccb'],
+    ['a^', '\\^', 'a', '^'],
+    ['a^', '[\\^]', 'a', '^'],
+    ['ab^', '[a^]', 'a', 'b', '^'],
+    ['ab^', '[^\\^a]+\\^', 'a', 'b', '^', 'ab', 'bb', 'b^', 'bb^'],
+    [null, '[a-c]', 'a', 'b', 'c', 'd'],
+    [null, '[a\\-c]', 'a', 'b', 'c', 'd', '-'],
     [null, '\\*|\\\\', '*', '\\', '\\*', '\\\\*'],
     ['abc', 'a.*b', 'a', 'b', 'ab', 'aab', 'ac', 'acb', 'accb'],
     [null, 'ab{3}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
     [null, 'ab{2,}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
     [null, 'ab{2,4}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
-    [null, '[a-c]', 'a', 'b', 'c'],
 ]
 
 count = 0
