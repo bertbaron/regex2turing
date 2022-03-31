@@ -12,7 +12,7 @@ function setDebug(value) {
     debug = value
 }
 
-var idcounter = 0
+var nfaStateCounter = 0
 class NFAState {
     static terminal(char) {
         return new NFAState(char, [], true)
@@ -23,7 +23,7 @@ class NFAState {
     constructor(char, children, open) {
         this.char = char
         this.children = children
-        this.id = idcounter++
+        this.id = nfaStateCounter++
         this.open = open
     }
     isGoal() {
@@ -33,7 +33,7 @@ class NFAState {
         let c = this.char ? this.char : 'λ'
         let out = this.children.map(c => c.id)
         if (this.open) out.push('⊙')
-        return `${this.id}(${c}→${out.join()})`
+        return `${this.id} (${c}→${out.join()})`
     }
     doSetOutput(next, visited) {
         if (visited.has(this.id)) return
@@ -425,10 +425,10 @@ function minimizeDfa(dfa) {
 function printNfa(nfa) {
     let set = new Set([nfa.id])
     let todo = [nfa]
-    console.log('NFA:')
+    let result = new Map()
     while (todo.length > 0) {
         let state = todo.pop()
-        console.log(`  ${state}`)
+        result.set(state.id, state)
         state.children.forEach(child => {
             if (!set.has(child.id)) {
                 set.add(child.id)
@@ -436,10 +436,14 @@ function printNfa(nfa) {
             }
         })
     }
+    console.log('NFA:')
+    for (let entry of new Map([...result.entries()].sort())) {
+        console.log(`  ${entry[1]}`)
+    }
 }
 
-function printDfa(dfa) {
-    console.log(`DFA: (${dfa.length} states)`)
+function printDfa(title, dfa) {
+    console.log(`${title}: (${dfa.length} states)`)
     for (let state of dfa) {
         let suffix = state.isGoal() ? ' ⊙ ' : '   '
         console.log(`  ${state.id}${suffix}`)
@@ -457,9 +461,9 @@ function compileExpression(expression) {
     let nfa = parser.parse()
     debug && printNfa(nfa)
     let dfa = nfa2dfa(nfa)
-    debug && printDfa(dfa)
+    debug && printDfa("DFA", dfa)
     dfa = minimizeDfa(dfa)
-    debug && printDfa(dfa)
+    debug && printDfa("Minimized DFA", dfa)
     return dfa
 }
 
@@ -479,18 +483,12 @@ function toTuringMachine(dfa, expression) {
     output += `accept: ${acceptState}\n\n`
     for (let state of dfa) {
         let findGoal = expression.find && state.isGoal()
-        // console.log(`findGoal=${findGoal} (${expression.find},${state.isGoal()})`)
         let symbols = new Set([])
         if (!findGoal) {
             for (let entry of state.next.entries()) {
                 let symbol = entry[0]
                 output += `${prefix}${state.id},${symbol}\n`
-                // if (!findGoal) {
-                //     console.log(`FINDGOAL`)
-                //     output += `${acceptState},${symbol},-\n`
-                // } else {
-                    output += `${prefix}${entry[1].id},${symbol},>\n`
-                // }
+                output += `${prefix}${entry[1].id},${symbol},>\n`
                 symbols.add(symbol)
             }
             if (rejectState) {
@@ -552,9 +550,9 @@ if (typeof (module) !== 'undefined') {
 }
 
 
-function testje(expr, alphabet) {
+function runFromCLI(expr, alphabet) {
     setDebug(true)
-    let expression = new Expression(expr, alphabet, null, null, true)
+    let expression = new Expression(expr, alphabet, null, null, false)
     let dfa = compileExpression(expression)
     let turing = toTuringMachine(dfa, expression)
     console.log(`Turing machine:\n${turing}`)
@@ -562,7 +560,11 @@ function testje(expr, alphabet) {
 
 if (typeof (process) !== 'undefined' && process.argv[1].endsWith('turingregex.js')) {
     // called directly with node.js
-    let expr = 'a+b'
+    if (process.argv.length <= 2) {
+        console.log("Usage: node turingregex.js <expression> [alphabet]")
+        process.exit(1)
+    }
+    let expr = null
     let alphabet = null
     if (process.argv.length > 2) {
         expr = process.argv[2]
@@ -570,7 +572,7 @@ if (typeof (process) !== 'undefined' && process.argv[1].endsWith('turingregex.js
     if (process.argv.length > 3) {
         alphabet = process.argv[3]
     }
-    testje(expr, alphabet)
+    runFromCLI(expr, alphabet)
 } else {
     // From browser
     console.log('Hello world')
