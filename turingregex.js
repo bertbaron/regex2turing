@@ -48,7 +48,6 @@ class NFAState {
         let visited = new Set([])
         this.doSetOutput(next, visited)
     }
-
     doClone(clonedMap) {
         if (clonedMap.has(this)) {
             return clonedMap.get(this)
@@ -71,7 +70,7 @@ class DFAState {
         this.nfaStates = nfaStates
         this.next = new Map()
         this.id = -1
-        this.key = makeKey(nfaStates)
+        this.key = nfaStates.map(s => s.id).sort().join()
         this.goal = nfaStates.filter(s => s.isGoal()).length > 0
     }
     addTransition(symbol, dfaState) {
@@ -337,14 +336,14 @@ class Parser {
 }
 
 function nfaClosure(states) {
-    let stateids = new Set([])
+    let stateIds = new Set([])
     let todo = states.slice(0)
     let closure = []
     while (todo.length > 0) {
         let s = todo.pop()
         closure.push(s)
-        for (let child of s.children.filter(c => !(c.char || stateids.has(c.id)))) {
-            stateids.add(child.id)
+        for (let child of s.children.filter(c => !(c.char || stateIds.has(c.id)))) {
+            stateIds.add(child.id)
             todo.push(child)
         }
     }
@@ -357,12 +356,8 @@ function goTo(states, symbol) {
 
 // returns the Set of symbols accepted by the given list of states
 function getSymbols(states) {
-    let childset = states.flatMap(state => state.children)
-    return new Set(childset.map(state => state.char).filter(symbol => symbol))
-}
-
-function makeKey(states) {
-    return states.map(s => s.id).sort().join()
+    let childSet = states.flatMap(state => state.children)
+    return new Set(childSet.map(state => state.char).filter(symbol => symbol))
 }
 
 function nfa2dfaSub(dfaSet, dfa) {
@@ -385,9 +380,9 @@ function nfa2dfaSub(dfaSet, dfa) {
 }
 
 function nfa2dfa(nfa) {
-    let stateset = nfaClosure([NFAState.lambda([nfa], false)])
+    let stateSet = nfaClosure([NFAState.lambda([nfa], false)])
     let dfa = []
-    nfa2dfaSub(dfa, new DFAState(stateset))
+    nfa2dfaSub(dfa, new DFAState(stateSet))
     for (let i = 0; i < dfa.length; i++) {
         dfa[i].id = i
     }

@@ -24,6 +24,7 @@ correctCases = [
     [null, 'ab{3}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
     [null, 'ab{2,}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
     [null, 'ab{2,4}c', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
+    [null, 'ab{0,2}c', 'ac', 'abc', 'abbc','abbbc','abbbbc','abbbbbc'],
 ]
 
 count = 0
