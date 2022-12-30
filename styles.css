@@ -1,4 +1,4 @@
-/*Mobile CSS*/
+/* Mobile CSS */
 @media (max-width: 550px){
 	.jumbotron h1 {
 	  font-size: 2rem;
@@ -12,6 +12,7 @@
 
 .jumbotron {
 	padding: 2rem 1rem;
+	background-color: #e9ecef;
 }
 
 .clipboard {
@@ -55,21 +56,17 @@
 	background-color: #027de7;
 }
 
-.collapse-ruler {
-	margin-top: -1rem;
-}
 .collapse-ruler .col {
 	padding-right: 0;
 }
 
 .code {
-	/* height: 100%; */
 	overflow-y: scroll;
 }
 
-/* .resultpane {
+.resultpane {
 	padding: 10px;
-} */
+}
 
 .hidden {
 	visibility: hidden;

@@ -1,10 +1,10 @@
 class Expression {
-    constructor(expression, alphabet, accept, reject, find) {
+    constructor(expression, alphabet, accept, reject, mode) {
         this.expression = expression
         this.alphabet = alphabet
         this.accept = accept
         this.reject = reject
-        this.find = find
+        this.mode = mode
     }
 }
 var debug = false
@@ -31,14 +31,14 @@ class NFAState {
     }
     toString() {
         let c = this.char ? this.char : 'λ'
-        let out = this.children.map(c => c.id)
+        let out = this.children.map((c) => c.id)
         if (this.open) out.push('⊙')
         return `${this.id} (${c}→${out.join()})`
     }
     doSetOutput(next, visited) {
         if (visited.has(this.id)) return
         visited.add(this.id)
-        this.children.forEach(c => c.doSetOutput(next, visited))
+        this.children.forEach((c) => c.doSetOutput(next, visited))
         if (this.open) {
             this.children.push(next)
             this.open = false
@@ -70,8 +70,11 @@ class DFAState {
         this.nfaStates = nfaStates
         this.next = new Map()
         this.id = -1
-        this.key = nfaStates.map(s => s.id).sort().join()
-        this.goal = nfaStates.filter(s => s.isGoal()).length > 0
+        this.key = nfaStates
+            .map((s) => s.id)
+            .sort()
+            .join()
+        this.goal = nfaStates.filter((s) => s.isGoal()).length > 0
     }
     addTransition(symbol, dfaState) {
         this.next.set(symbol, dfaState)
@@ -84,16 +87,72 @@ class DFAState {
     }
 }
 
-const TOKENSTATE_GLOBAL=0
-const TOKENSTATE_CHARCLASS=1
+const SELF = 'self'
+const NEXT = 'next'
+
+class TuringTransition {
+    constructor(read, write, move, next) {
+        this.read = read
+        this.write = write
+        this.move = move
+        this.next = next
+    }
+}
+
+class TuringState {
+    constructor(name) {
+        this.name = name
+        this.comments = []
+        this.transitions = []
+    }
+
+    addComment(comment) {
+        this.comments.push(comment)
+    }
+
+    addTransition(read, write, move, next) {
+        if (typeof next !== 'string') {
+            next = next.name
+        } else if (next == SELF) {
+            next = this.name
+        } else if (next == NEXT) {
+            const indexOfNumberSuffix = this.name.search(/\d+$/)
+            const number = this.name.substring(indexOfNumberSuffix)
+            next = this.name.replace(number, Number(number) + 1)
+        }
+        this.transitions.push(new TuringTransition(read, write, move, next))
+    }
+}
+
+class TuringMachine {
+    constructor(comments, description, initialState, acceptState) {
+        this.comments = comments
+        this.description = description
+        this.initialState = initialState
+        this.acceptState = acceptState
+        this.states = []
+    }
+
+    addStates(states) {
+        this.states.push(...states)
+    }
+}
+
+const TOKENSTATE_GLOBAL = 0
+const TOKENSTATE_CHARCLASS = 1
 class Parser {
     constructor(expression) {
         this.expr = expression.expression
-        if (expression.find) this.expr = `.*${this.expr}`
+        if (expression.mode == 'contains') {
+            if (!expression.alphabet) {
+                throw "Alphabet must be specified for 'contains'"
+            }
+            this.expr = `.*(${this.expr})`
+        }
         this.alphabet = expression.alphabet
         this.index = 0
         this.token = null
-        this.tokenState=TOKENSTATE_GLOBAL
+        this.tokenState = TOKENSTATE_GLOBAL
     }
 
     clean(t) {
@@ -138,7 +197,7 @@ class Parser {
     }
 
     peek() {
-        if (this.token == null && this.index<this.expr.length) this.fetchNextToken()
+        if (this.token == null && this.index < this.expr.length) this.fetchNextToken()
         return this.token
     }
 
@@ -181,11 +240,11 @@ class Parser {
                 if (next.length > 1) {
                     this.fail(`Operator not allowed in character class (range): ${this.clean(next)}`)
                 }
-                let size=0
-                for (let c = start; c <= next; c=String.fromCharCode(c.charCodeAt(0) + 1)) {
+                let size = 0
+                for (let c = start; c <= next; c = String.fromCharCode(c.charCodeAt(0) + 1)) {
                     characters.push(c)
                     size++
-                    if (size>1000) {
+                    if (size > 1000) {
                         this.fail(`Character range too large: [${start}-${next}]`)
                     }
                 }
@@ -204,10 +263,13 @@ class Parser {
         }
         if (complement) {
             let alphabet = new Set(this.getAlphabet('^ character class'))
-            characters.forEach(c => alphabet.delete(c))
+            characters.forEach((c) => alphabet.delete(c))
             characters = alphabet
         }
-        return NFAState.lambda(Array.from(new Set(characters)).map(c => NFAState.terminal(c)), false)
+        return NFAState.lambda(
+            Array.from(new Set(characters)).map((c) => NFAState.terminal(c)),
+            false
+        )
     }
 
     parsePrimary() {
@@ -250,20 +312,20 @@ class Parser {
         let start = parseInt(match[1])
         let end = start
         if (match[2] && !match[3]) {
-            end = null // infiniy
+            end = null // infinity
         } else if (match[3]) {
             end = parseInt(match[3])
         }
         let expr = NFAState.lambda([], true)
         let lastElement = expr
-        for (let i=0; i<start; i++) {
+        for (let i = 0; i < start; i++) {
             let clone = p1.clone()
             expr.setOutput(clone)
             lastElement = clone
         }
         if (end) {
             let tail = NFAState.lambda([], true)
-            for (let i=start; i<end; i++) {
+            for (let i = start; i < end; i++) {
                 let clone = p1.clone()
                 clone.setOutput(tail)
                 tail = NFAState.lambda([clone], true)
@@ -325,8 +387,6 @@ class Parser {
     }
 
     parse() {
-        // this.tokenize()
-        // debug && console.log(`Tokens: ${this.tokens}`)
         let result = this.parseExpression()
         if (!this.end) {
             this.fail('Unexpected trailing characters')
@@ -342,7 +402,7 @@ function nfaClosure(states) {
     while (todo.length > 0) {
         let s = todo.pop()
         closure.push(s)
-        for (let child of s.children.filter(c => !(c.char || stateIds.has(c.id)))) {
+        for (let child of s.children.filter((c) => !(c.char || stateIds.has(c.id)))) {
             stateIds.add(child.id)
             todo.push(child)
         }
@@ -351,13 +411,13 @@ function nfaClosure(states) {
 }
 
 function goTo(states, symbol) {
-    return nfaClosure(states.flatMap(state => state.children.filter(child => child.char == symbol)))
+    return nfaClosure(states.flatMap((state) => state.children.filter((child) => child.char == symbol)))
 }
 
 // returns the Set of symbols accepted by the given list of states
 function getSymbols(states) {
-    let childSet = states.flatMap(state => state.children)
-    return new Set(childSet.map(state => state.char).filter(symbol => symbol))
+    let childSet = states.flatMap((state) => state.children)
+    return new Set(childSet.map((state) => state.char).filter((symbol) => symbol))
 }
 
 function nfa2dfaSub(dfaSet, dfa) {
@@ -368,7 +428,7 @@ function nfa2dfaSub(dfaSet, dfa) {
         let targets = goTo(dfa.nfaStates, symbol)
         let newState = new DFAState(targets)
         let existing = false
-        for (let curState of dfaSet.filter(c => c.key == newState.key)) {
+        for (let curState of dfaSet.filter((c) => c.key == newState.key)) {
             newState = curState
             existing = true
         }
@@ -390,7 +450,12 @@ function nfa2dfa(nfa) {
 }
 
 function makeDfaKey(dfaState) {
-    return Array.from(dfaState.next).map(entry => entry[0] + "." + entry[1].id).sort().join() + (dfaState.goal ? ':goal' : '')
+    return (
+        Array.from(dfaState.next)
+            .map(([symbol, state]) => symbol + '.' + state.id)
+            .sort()
+            .join() + (dfaState.goal ? ':goal' : '')
+    )
 }
 
 function minimizeDfa(dfa) {
@@ -406,10 +471,10 @@ function minimizeDfa(dfa) {
             if (states.has(key)) {
                 target = newDfa[states.get(key)]
                 newDfa[state.id] = null
-                for (let s of newDfa.filter(s => s)) {
-                    for (let entry of s.next) {
-                        if (entry[1] == state) {
-                            s.next.set(entry[0], target)
+                for (let s of newDfa.filter((s) => s)) {
+                    for (let [symbol, next] of s.next) {
+                        if (next == state) {
+                            s.next.set(symbol, target)
                         }
                     }
                 }
@@ -420,14 +485,24 @@ function minimizeDfa(dfa) {
             }
         }
     }
-    newDfa = newDfa.filter(s => s)
+    newDfa = newDfa.filter((s) => s)
 
     // renumber states
-    for (let i=0; i<newDfa.length; i++) {
+    for (let i = 0; i < newDfa.length; i++) {
         newDfa[i].id = i
     }
 
     return newDfa
+}
+
+function removeTransationsFromGoalStates(dfa) {
+    // we should make a modified copy of the dfa, but we can get away with modifying the original for now
+    for (let state of dfa) {
+        if (state.goal) {
+            state.next.clear()
+        }
+    }
+    return dfa
 }
 
 function printNfa(nfa) {
@@ -437,16 +512,22 @@ function printNfa(nfa) {
     while (todo.length > 0) {
         let state = todo.pop()
         result.set(state.id, state)
-        state.children.forEach(child => {
+        state.children.forEach((child) => {
             if (!set.has(child.id)) {
                 set.add(child.id)
                 todo.push(child)
             }
         })
     }
+
+    function sortId(id) {
+        return id == nfa.id ? -9999 : id
+    }
+    let stateNumbers = [...result.keys()].sort((a,b) => sortId(a) - sortId(b))
     console.log('NFA:')
-    for (let entry of new Map([...result.entries()].sort())) {
-        console.log(`  ${entry[1]}`)
+    for (let state of stateNumbers) {
+        let prefix = ' '.repeat(2 - state.toString().length)
+        console.log(` ${prefix}${result.get(state)}`)
     }
 }
 
@@ -455,27 +536,13 @@ function printDfa(title, dfa) {
     for (let state of dfa) {
         let suffix = state.isGoal() ? ' ⊙ ' : '   '
         console.log(`  ${state.id}${suffix}`)
-        for (let entry of state.next.entries()) {
-            console.log(`    ${entry[0]} -> ${entry[1].id}`)
+        for (let [symbol, next] of state.next.entries()) {
+            console.log(`    ${symbol} -> ${next.id}`)
         }
     }
 }
 
-function compileExpression(expression) {
-    if (expression.find && !expression.alphabet) {
-        throw `An explicit alphabet is required by the find option`
-    }
-    let parser = new Parser(expression)
-    let nfa = parser.parse()
-    debug && printNfa(nfa)
-    let dfa = nfa2dfa(nfa)
-    debug && printDfa("DFA", dfa)
-    dfa = minimizeDfa(dfa)
-    debug && printDfa("Minimized DFA", dfa)
-    return dfa
-}
-
-function toTuringMachine(dfa, expression) {
+function turingMachineForMatch(dfa, expression) {
     let prefix = 'regex'
     let acceptState = expression.accept || `${prefix}_accept`
     let rejectState = expression.reject
@@ -484,46 +551,424 @@ function toTuringMachine(dfa, expression) {
         throw 'An explicit alphabet is required when a reject state is given'
     }
 
-    let output = '// generated by regex2turing:\n'
-    output += '// https://bertbaron.github.io/regex2turing/\n\n'
-    output += `name: Accepts inputs ${expression.find ? 'containing' : 'matching'} regex '${expression.expression}'\n`
-    output += `init: ${prefix}0\n`
-    output += `accept: ${acceptState}\n\n`
+    let turingMachine = new TuringMachine(
+        ['generated by regex2turing:', 'https://bertbaron.github.io/regex2turing/'],
+        `Accepts inputs matching regex '${expression.expression}'`,
+        `${prefix}0`,
+        `${acceptState}`
+    )
+
+    let turingStates = []
+
     for (let state of dfa) {
-        let findGoal = expression.find && state.isGoal()
+        let turingState = new TuringState(`${prefix}${state.id}`)
         let symbols = new Set([])
-        if (!findGoal) {
-            for (let entry of state.next.entries()) {
-                let symbol = entry[0]
-                output += `${prefix}${state.id},${symbol}\n`
-                output += `${prefix}${entry[1].id},${symbol},>\n`
-                symbols.add(symbol)
-            }
-            if (rejectState) {
-                for (let symbol of alphabet) {
-                    if (!symbols.has(symbol)) {
-                        output += `${prefix}${state.id},${symbol}\n`
-                        output += `${rejectState},${symbol},-\n`
-                    }
+        for (let [symbol, next] of state.next.entries()) {
+            turingState.addTransition(symbol, symbol, '>', `${prefix}${next.id}`)
+            symbols.add(symbol)
+        }
+        if (rejectState) {
+            for (let symbol of alphabet) {
+                if (!symbols.has(symbol)) {
+                    turingState.addTransition(symbol, symbol, '<', rejectState)
                 }
             }
         }
 
         if (state.isGoal()) {
-            let a = expression.find ? expression.alphabet : '_'
-            a = a.includes('_') ? a : a + '_'
-            for (let i=0; i<a.length; i++) {
-                output += `${prefix}${state.id},${a.charAt(i)}\n`
-                output += `${acceptState},${a.charAt(i)},-\n`    
+            turingState.addTransition(' ', ' ', '<', acceptState)
+        }
+        turingStates.push(turingState)
+    }
+    turingMachine.addStates(turingStates)
+    return turingMachine
+}
+
+function turingMachineForContains(dfa, expression) {
+    let prefix = 'regex'
+    let acceptState = expression.accept || `${prefix}_accept`
+    let rejectState = expression.reject
+    let alphabet = expression.alphabet ? new Set(expression.alphabet.split('')) : null
+    if (rejectState && !alphabet) {
+        throw 'An explicit alphabet is required when a reject state is given'
+    }
+
+    let turingMachine = new TuringMachine(
+        ['generated by regex2turing:', 'https://bertbaron.github.io/regex2turing/'],
+        `Accepts inputs with substring matching regex '${expression.expression}'`,
+        `${prefix}0`,
+        `${acceptState}`
+    )
+
+    let turingStates = []
+
+    for (let state of dfa) {
+        let turingState = new TuringState(`${prefix}${state.id}`)
+        let symbols = new Set([])
+        if (state.isGoal()) {
+            for (let symbol of expression.alphabet + ' ') {
+                turingState.addTransition(symbol, symbol, '<', acceptState)
+            }
+        } else {
+            for (let [symbol, next] of state.next.entries()) {
+                turingState.addTransition(symbol, symbol, '>', `${prefix}${next.id}`)
+                symbols.add(symbol)
+            }
+            if (rejectState) {
+                turingState.addTransition(' ', ' ', '<', rejectState)
             }
         }
-        output += '\n'
+
+        turingStates.push(turingState)
+    }
+    turingMachine.addStates(turingStates)
+    return turingMachine
+}
+
+function turingMachineForFind(dfa, expression) {
+    // let prefix = 'regex_'
+    let prefix = ''
+    let acceptState = expression.accept || `${prefix}accept`
+    let rejectState = expression.reject
+    let alphabet = expression.alphabet ? new Set(expression.alphabet.split('')) : null
+    if (!alphabet) {
+        throw 'An explicit alphabet is required for find'
+    }
+    if (dfa[0].isGoal()) {
+        throw 'Expression matches empty string (not supported for find)'
+    }
+
+    // Make a set of symbols that can mark the end of a match. This can be used to remove characters
+    // from the end of a string in a more efficient way in many cases.
+    let endSymbols = new Set()
+    for (let fromState of dfa) {
+        for (let [symbol, toState] of fromState.next) {
+            if (toState.isGoal()) {
+                endSymbols.add(symbol)
+            }
+        }
+    }
+
+    let turingMachine = new TuringMachine(
+        ['generated by regex2turing:', 'https://bertbaron.github.io/regex2turing/'],
+        `Accepts inputs containing regex '${expression.expression}', selecting the first match (removing the rest)`,
+        `${prefix}find0`,
+        `${acceptState}`
+    )
+
+    find_first_match = []
+    find_longer_match = []
+
+    // Add states driven by the DFA
+    for (let state of dfa) {
+        let symbols = new Set([])
+        first_match_state = new TuringState(`${prefix}find${state.id}`)
+        longer_match_state = new TuringState(`${prefix}match${state.id}`)
+        if (!state.isGoal()) {
+            for (let [symbol, next] of state.next.entries()) {
+                first_match_state.addTransition(symbol, symbol, '>', `${prefix}find${next.id}`)
+                longer_match_state.addTransition(symbol, symbol, '>', `${prefix}match${next.id}`)
+                symbols.add(symbol)
+            }
+            for (let symbol of alphabet) {
+                if (!symbols.has(symbol)) {
+                    first_match_state.addTransition(symbol, symbol, '<', `${prefix}strip_start0`)
+                    longer_match_state.addTransition(symbol, ' ', '>', `${prefix}strip_end1`)
+                }
+            }
+            longer_match_state.addTransition(' ', ' ', '<', `${prefix}strip_end0`)
+        }
+
+        if (state.isGoal()) {
+            for (let [symbol, next] of state.next.entries()) {
+                first_match_state.addTransition(symbol, symbol, '>', `${prefix}match${next.id}`)
+                longer_match_state.addTransition(symbol, symbol, '>', `${prefix}match${next.id}`)
+                symbols.add(symbol)
+            }
+            for (let symbol of alphabet) {
+                if (!symbols.has(symbol)) {
+                    first_match_state.addTransition(symbol, ' ', '>', `${prefix}strip_end1`)
+                    longer_match_state.addTransition(symbol, ' ', '>', `${prefix}strip_end1`)
+                }
+            }
+            first_match_state.addTransition(' ', ' ', '<', `${prefix}accept`)
+            longer_match_state.addTransition(' ', ' ', '<', `${prefix}accept`)
+        }
+        find_first_match.push(first_match_state)
+        find_longer_match.push(longer_match_state)
+    }
+    if (rejectState) {
+        find_first_match[0].addTransition(' ', ' ', '<', rejectState)
+    }
+
+    // Add the generic states
+
+    find_match_failed = [new TuringState(`${prefix}strip_start0`), new TuringState(`${prefix}strip_start1`)]
+    find_longer_match_failed = [
+        new TuringState(`${prefix}strip_end0`),
+        new TuringState(`${prefix}strip_end1`),
+        new TuringState(`${prefix}strip_end2`),
+        new TuringState(`${prefix}strip_end3`),
+    ]
+    for (let symbol of alphabet) {
+        find_match_failed[0].addTransition(symbol, symbol, '<', SELF)
+        find_longer_match_failed[0].addTransition(symbol, ' ', '<', find_longer_match_failed[2])
+        find_longer_match_failed[1].addTransition(symbol, ' ', '>', SELF)
+        find_match_failed[1].addTransition(symbol, ' ', '>', `${prefix}find0`)
+        if (endSymbols.has(symbol)) {
+            find_longer_match_failed[2].addTransition(symbol, symbol, '<', NEXT)
+        } else {
+            find_longer_match_failed[2].addTransition(symbol, ' ', '<', SELF)
+        }
+        find_longer_match_failed[3].addTransition(symbol, symbol, '<', SELF)
+    }
+    find_match_failed[0].addTransition(' ', ' ', '>', NEXT)
+    find_longer_match_failed[1].addTransition(' ', ' ', '<', NEXT)
+    find_longer_match_failed[2].addTransition(' ', ' ', '<', SELF)
+    find_longer_match_failed[3].addTransition(' ', ' ', '>', `${prefix}find0`)
+
+    find_first_match[0].comments = ['', 'find first match']
+    turingMachine.addStates(find_first_match)
+    find_match_failed[0].comments = ['', 'match failed, remove first character and try again']
+    turingMachine.addStates(find_match_failed)
+    find_longer_match[0].comments = ['', 'match found, find longer match']
+    turingMachine.addStates(find_longer_match)
+    find_longer_match_failed[0].comments = ['', 'match failed but shorter match found, remove trailing and try again']
+    turingMachine.addStates(find_longer_match_failed)
+
+    return turingMachine
+}
+
+function toTuringMachine(dfa, expression) {
+    switch (expression.mode) {
+        case 'match':
+            return turingMachineForMatch(dfa, expression)
+        case 'contains':
+            return turingMachineForContains(dfa, expression)
+        case 'find':
+            return turingMachineForFind(dfa, expression)
+        default:
+            throw `Unknown mode ${expression.mode}`
+    }
+}
+
+function expandAlphabet(alphabet) {
+    // (ab)use the parser to parse the alphabet in character-class syntax
+    if (alphabet.charAt(0) == '^') {
+        alphabet = '\\' + alphabet
+    }
+    const alphabetExpression = new Expression(`${alphabet}]`)
+    const parser = new Parser(alphabetExpression)
+    parser.tokenState = TOKENSTATE_CHARCLASS
+    const cclass = parser.parseCharacterClass()
+    let result = ''
+    for  (let child of cclass.children) {
+        result += child.char
+    }
+    return result
+}
+
+function compileExpression(expression) {
+    if (expression.mode == 'find' && !expression.alphabet) {
+        throw `An explicit alphabet is required by the find option`
+    }
+    // [a-d] -> [abcd]. Not the best place to do this, but it works.
+    if (expression.alphabet) {
+        expression.alphabet = expandAlphabet(expression.alphabet)
+    }
+    let parser = new Parser(expression)
+    let nfa = parser.parse()
+    debug && printNfa(nfa)
+    let dfa = nfa2dfa(nfa)
+    debug && printDfa('DFA', dfa)
+    // TODO if mode is 'contains', remove outgoing states from the accept states
+    if (expression.mode == 'contains') {
+        dfa = removeTransationsFromGoalStates(dfa)
+        debug && printDfa('DFA without transitions from accept states', dfa)
+    }
+
+    dfa = minimizeDfa(dfa)
+    debug && printDfa('Minimized DFA', dfa)
+    let turing = toTuringMachine(dfa, expression)
+    return [dfa, turing]
+}
+
+function writeComments(prefix, comments) {
+    return comments.map((comment) => (comment.length > 0 ? `${prefix} ${comment}` : comment)).join('\n') + '\n'
+}
+
+function writeAsTuringMachineSimulator(turingMachine) {
+    let output = writeComments('//', turingMachine.comments)
+    output += '\n'
+    output += `name: ${turingMachine.description}\n`
+    output += `init: ${turingMachine.initialState}\n`
+    output += `accept: ${turingMachine.acceptState}\n`
+    output += '\n'
+
+    for (let state of turingMachine.states) {
+        output += writeComments('//', state.comments)
+        for (let transition of state.transitions) {
+            let read = transition.read == ' ' ? '_' : transition.read
+            let write = transition.write == ' ' ? '_' : transition.write
+            output += `${state.name},${read}\n`
+            output += `${transition.next},${write},${transition.move}\n`
+        }
     }
     return output
 }
+
+function writeAsTuringMachineIo(turingMachine) {
+    let output = writeComments('#', turingMachine.comments)
+    output += `# ${turingMachine.description}\n`
+    output += `input: '<enter your input here>'\n`
+    output += `blank: ' '\n`
+    output += `start state: ${turingMachine.initialState}\n`
+    output += `table:\n`
+
+    for (let state of turingMachine.states) {
+        output += writeComments('   #', state.comments)
+        output += `  ${state.name}:\n`
+        let optimized = new Map()
+        for (let transition of state.transitions) {
+            let read = transition.read
+            let write = transition.write == read ? 'KEEP' : transition.write
+            let next = transition.next == state.name ? 'SELF' : transition.next
+            let move = transition.move == '<' ? 'L' : (transition.move == '>' ? 'R' : 'S')
+            let key = `${write}--${move}--${next}`
+            let value = optimized.get(key)
+            if (value) {
+                value.push(read)
+            } else {
+                optimized.set(key, [read])
+            }
+        }
+
+        function quoteNonAlphanumeric(s) {
+            if (s.match(/^[a-zA-Z0-9]+$/)) {
+                return s
+            } else {
+                return `'${s}'`
+            }
+        }
+
+        let transitions = [] // [first-symbol, reads, write, move, next]
+        let longest_reads = 0
+        for (let [key, value] of optimized) {
+            let symbols = value.sort()
+            let reads = symbols.map(v => `${quoteNonAlphanumeric(v)}`).join(',')
+            reads = symbols.length == 1 ? reads : `[${reads}]`
+            longest_reads = Math.max(longest_reads, reads.length)
+            // optimized.set(key, [reads[0], reads])
+            let [write, move, next] = key.split('--')
+            transitions.push([symbols[0], reads, write, move, next])
+        }
+        transitions.sort((a, b) => a[0].localeCompare(b[0]))
+
+        for (let [firstSymbol, reads, write, move, next] of transitions) {
+            // Pad reads to align columns
+            reads = reads.padEnd(longest_reads)
+            // let [write, move, next] = key.split('--')
+            if (write == 'KEEP' && next == 'SELF') {
+                output += `    ${reads}: ${move}\n`
+            } else {
+                let entries = []
+                if (write != 'KEEP') {
+                    entries.push(`write: ${quoteNonAlphanumeric(write)}`)
+                }
+                if (next == 'SELF') {
+                    entries.push(move)
+                } else {
+                    entries.push(`${move}: ${next}`)
+                }
+                output += `    ${reads}: {${entries.join(', ')}}\n`
+            }
+        }
+    }
+    output += `\n  ${turingMachine.acceptState}:\n`
+    if (turingMachine.rejectState) {
+        output += `\n  ${turingMachine.rejectState}:\n`
+    }
+    return output
+}
+
+function writeAsGraphvizDFA(dfa) {
+    out = `digraph {\n`
+    out += `  rankdir=LR;\n`
+    for (let state of dfa) {
+        let suffix = state.isGoal() ? ' [shape=doublecircle]' : ' [shape=circle]'
+        out += `  ${state.id}${suffix};\n`
+
+        // combine transitions with same next state
+        let combined = new Map()
+        for (let [symbol, next] of state.next.entries()) {
+            let value = combined.get(next.id)
+            if (value) {
+                value.push(symbol)
+            } else {
+                combined.set(next.id, [symbol])
+            }
+        }
+        function pushRange(reduced, start, end) {
+            const [from, to] = [start.charCodeAt(0), end.charCodeAt(0)]
+            if (to - from < 2) {
+                for (let i = from; i <= to; i++) {
+                    reduced.push(String.fromCharCode(i))
+                }
+            } else {
+                reduced.push(`${start}-${end}`)
+            }
+        }
+        // reduce 3 or more sequential symbols to a range
+        for (let [next, symbols] of combined.entries()) {
+            symbols.sort()
+            let reduced = []
+            let start = null
+            let prev = null
+            for (let symbol of symbols) {
+                if (prev == null) {
+                    start = symbol
+                } else if (symbol.charCodeAt(0) != prev.charCodeAt(0) + 1) {
+                    pushRange(reduced, start, prev)
+                    start = symbol
+                }
+                prev = symbol
+            }
+            pushRange(reduced, start, prev)
+            combined.set(next, reduced)
+        }
+
+        let keys = Array.from(combined.keys()).sort()
+        for (let next of keys) {
+            let symbols = combined.get(next)
+            let label = symbols.map(v => `${v}`).join(',')
+            out += `  ${state.id} -> ${next} [label="${label}"];\n`
+        }
+    }
+    out += '}\n'
+    return out
+}
+
+function writeToTarget(dfa, turing, target) {
+    let out = null
+    switch (target) {
+        case 'turingmachinesimulator.com':
+            out = writeAsTuringMachineSimulator(turing)
+            break
+        case 'turingmachine.io':
+            out = writeAsTuringMachineIo(turing)
+            break
+        case 'dfa':
+            out = writeAsGraphvizDFA(dfa)
+            break
+        default:
+            throw `Unknown output format ${target}`
+    }
+    return out
+}
+
 function compile() {
-    var errorElement = document.getElementById("error");
-    errorElement.classList.remove("show");
+    var errorElement = document.getElementById('error')
+    errorElement.classList.remove('show')
 
     document.getElementById('output').value = ''
 
@@ -531,62 +976,211 @@ function compile() {
     let alphabet = document.getElementById('alphabet').value
     let accept = document.getElementById('accept').value
     let reject = document.getElementById('reject').value
-    let find = document.getElementById('find').checked
+    const target = document.querySelector('input[name="target"]:checked').id;
+    const mode = document.querySelector('input[name="mode"]:checked').id;
+    const advanced = document.getElementById("advanced").classList.contains("show")
+
+    // Update the query parameters with the values of the input fields
+    var url = new URL(window.location.href)
+    url.search = ''
+    expression && url.searchParams.set("expression", expression)
+    alphabet && url.searchParams.set("alphabet", alphabet)
+    target && url.searchParams.set("target", target)
+    mode && url.searchParams.set("mode", mode)
+    accept && url.searchParams.set("accept", accept)
+    reject && url.searchParams.set("reject", reject)
+    advanced && url.searchParams.set("advanced", 'true')
+
+    // Update the URL in the browser
+    window.history.pushState({}, "", url.href)
+
     let result = null
     try {
-        let expr = new Expression(expression, alphabet, accept, reject, find)
-        let dfa = compileExpression(expr)
-        result = toTuringMachine(dfa, expr)
+        let expr = new Expression(expression, alphabet, accept, reject, mode)
+        let [dfa, turingMachine] = compileExpression(expr)
+        result = writeToTarget(dfa, turingMachine, target)
     } catch (err) {
         errorElement.innerHTML = err
-        errorElement.classList.add("show");
+        errorElement.classList.add('show')
+        console.log(err)
         return
     }
+
+    const targetLink = document.getElementById('target-link')
+    switch (target) {
+        case 'turingmachinesimulator.com':
+            targetLink.href = 'https://turingmachinesimulator.com/'
+            targetLink.innerHTML = 'Turing Machine Simulator'
+            break
+        case 'turingmachine.io':
+            targetLink.href = 'https://turingmachine.io/'
+            targetLink.innerHTML = 'Turing Machine Visualizer'
+            break
+        case 'dfa':
+            const uriEncoded = encodeURIComponent(result)
+            targetLink.href = `https://dreampuf.github.io/GraphvizOnline/#${uriEncoded}`
+            targetLink.innerHTML = 'Graphviz Online'
+            break
+        default:
+            throw `Unknown output format ${target}`
+    }
+
     document.getElementById('output').value = result
 }
 
 function copyToClipboard() {
     let text = document.getElementById('output').value
     navigator.clipboard.writeText(text)
+    let button = document.getElementById('copy-button')
+    const tooltip = bootstrap.Tooltip.getInstance('#copy-button')
+    button.setAttribute('data-bs-original-title', 'Copied!')
+    tooltip.update()
+    tooltip.show()
+    setTimeout(function() {
+        tooltip.hide()
+        button.setAttribute('data-bs-original-title', 'Copy to clipboard')
+        tooltip.update()
+    }, 3000);
 }
 
-if (typeof (module) !== 'undefined') {
+if (typeof module !== 'undefined') {
     module.exports = {
+        Expression: Expression,
         compileExpression: compileExpression,
-        setDebug: setDebug
-    };
+        setDebug: setDebug,
+    }
 }
 
-function cliCompile(expr, alphabet) {
-    setDebug(true)
-    let expression = new Expression(expr, alphabet, null, null, false)
-    let dfa = compileExpression(expression)
-    let turing = toTuringMachine(dfa, expression)
-    console.log(`Turing machine:\n${turing}`)
+function cliCompile(expr, alphabet, acceptState, rejectState, mode, target) {
+    let expression = new Expression(expr, alphabet, acceptState, rejectState, mode)
+    let [dfa, turing] = compileExpression(expression)
+    const out = writeToTarget(dfa, turing, target)
+    console.log(`Output:\n${out}`)
+}
+
+function usage() {
+    console.log('Usage: node turingregex.js [options] <expression> [alphabet]')
+    console.log('Options:')
+    console.log('  -d: enable debug output')
+    console.log('  -m <mode>: set mode (find, match, contains)')
+    console.log('  -a <state>: set accept state')
+    console.log('  -r <state>: set reject state')
+    console.log('  -o <output>: set output (turingmachinesimulator.com (default), turingmachine.io, dfa')
+    console.log('  -h: show this help')
 }
 
 function runFromCLI() {
-    // called directly with node.js
-    if (process.argv.length <= 2) {
-        console.log("Usage: node turingregex.js <expression> [alphabet]")
-        process.exit(1)
-    }
     let expr = null
     let alphabet = null
-    if (process.argv.length > 2) {
-        expr = process.argv[2]
+    let mode = 'match'
+    let acceptState = null
+    let rejectState = null
+    let output = 'turingmachinesimulator.com'
+
+    // Parse options (starting with -)
+    let idx = 2
+    for (; idx < process.argv.length; idx++) {
+        let arg = process.argv[idx]
+        if (arg.startsWith('-')) {
+            switch (arg) {
+                case '-h':
+                    usage()
+                    process.exit(0)
+                case '-d':
+                    setDebug(true)
+                    break
+                case '-m':
+                    mode = process.argv[++idx]
+                    break
+                case '-a':
+                    acceptState = process.argv[++idx]
+                    break
+                case '-r':
+                    rejectState = process.argv[++idx]
+                    break
+                case '-o':
+                    output = process.argv[++idx]
+                    break
+                default:
+                    console.log(`Unknown option ${arg}`)
+                    process.exit(1)
+            }
+        } else {
+            break
+        }
     }
-    if (process.argv.length > 3) {
-        alphabet = process.argv[3]
+
+    if (idx >= process.argv.length) {
+        console.log('Missing expression, use -h for help')
+        process.exit(1)
     }
-    cliCompile(expr, alphabet)
+
+    expr = process.argv[idx++]
+    if (idx < process.argv.length) {
+        alphabet = process.argv[idx++]
+    }
+    cliCompile(expr, alphabet, acceptState, rejectState, mode, output)
 }
 
-if (typeof (process) == 'undefined') {
-    console.log('turingregex running from browser')
-    $(function () {
-        $('[data-toggle="tooltip"]').tooltip()
+function initPage() {
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl, {'delay': { show: 1000, hide: 200 }})
     })
+
+    // Get optional query parameters and initialize the form accordingly
+    var url = new URL(window.location.href);
+
+    var expression = url.searchParams.get("expression")
+    var alphabet = url.searchParams.get("alphabet")
+    var target = url.searchParams.get("target")
+    var mode = url.searchParams.get("mode")
+    var accept = url.searchParams.get("accept")
+    var reject = url.searchParams.get("reject")
+    var advanced = url.searchParams.get("advanced")
+
+    if (expression) {
+        document.getElementById("expression").value = expression
+    }
+    if (alphabet) {
+        document.getElementById("alphabet").value = alphabet
+    }
+    if (target) {
+        document.getElementById("turingmachinesimulator.com").checked = target === 'turingmachinesimulator.com'
+        document.getElementById("turingmachine.io").checked = target === 'turingmachine.io'
+        document.getElementById("dfa").checked = target === 'dfa'
+    }
+    if (mode) {
+        document.getElementById("match").checked = mode === 'match'
+        document.getElementById("contains").checked = mode === 'contains'
+        document.getElementById("find").checked = mode === 'find'
+    }
+    if (accept) {
+        document.getElementById("accept").value = accept
+    }
+    if (reject) {
+        document.getElementById("accept").value = accept
+    }
+    if (advanced === "true") {
+        document.getElementById("advanced").classList.add('show')
+    }
+
+    if (expression) {
+        compile()
+    }
+}
+
+if (typeof process == 'undefined') {
+    console.log('turingregex running from browser')
+    window.onload = initPage
+    // $(function () {
+    //     $('[data-bs-toggle="tooltip"]').tooltip({'delay': { show: 1000, hide: 200 }})
+        // var dropdownMenu = document.getElementById('targetDropdown')
+        // var dropdownButton = document.getElementById('targetDropdownButton')
+        // dropdownMenu.addEventListener('click', function(event) {
+        //     dropdownButton.innerHTML = event.target.innerHTML.trim()
+        // })
+    // })
 } else {
     if (process.argv[1].endsWith('turingregex.js')) {
         console.log('turingregex running from console')
