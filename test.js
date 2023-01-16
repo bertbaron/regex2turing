@@ -101,29 +101,30 @@ function assertResult(result, pattern, input, expectedAccepted, expectedTape) {
 
 // [ alphabet, regex, examples...]
 matchCases = [
-    [null, 'a', 'a', 'b', '', 'aa', 'bb', 'ab'],
-    [null, 'ab|ac', 'a', 'b', 'ab', 'ac', 'ba', 'ca', 'abc'],
-    [null, 'abc|def', 'abc', 'def', 'ab', 'de', 'abf,abcd'],
-    [null, 'a|b|c', 'a', 'b', 'c', '', 'ab', 'cc'],
-    [null, 'a|bc|d', 'a', 'ad', 'bc', 'bd', 'abcd'],
-    [null, '(a|b)(c|d)', 'a', 'ad', 'bc', 'bd', 'abcd'],
-    [null, 'aa*b', 'a', 'ab', 'aab', 'aaab', 'b'],
-    [null, 'aa+b', 'a', 'ab', 'aab', 'aaab', 'b'],
-    [null, 'aa?b', 'a', 'ab', 'aab', 'aaab', 'b'],
-    [null, '[abc]+', 'a', 'aa', 'ab', 'abc', 'd'],
-    ['abc', '[^ab]+b', 'a', 'b', 'c', 'ab', 'bb', 'cb', 'ccb'],
-    ['a^', '\\^', 'a', '^'],
-    ['a^', '[\\^]', 'a', '^'],
-    ['ab^', '[a^]', 'a', 'b', '^'],
-    ['ab^', '[^\\^a]+\\^', 'a', 'b', '^', 'ab', 'bb', 'b^', 'bb^'],
-    [null, '[a-c]', 'a', 'b', 'c', 'd'],
-    [null, '[a\\-c]', 'a', 'b', 'c', 'd', '-'],
-    [null, '\\*|\\\\', '*', '\\', '\\*', '\\\\*'],
-    ['abc', 'a.*b', 'a', 'b', 'ab', 'aab', 'ac', 'acb', 'accb'],
-    [null, 'ab{3}c', 'abc', 'abbc', 'abbbc', 'abbbbc', 'abbbbbc'],
-    [null, 'ab{2,}c', 'abc', 'abbc', 'abbbc', 'abbbbc', 'abbbbbc'],
-    [null, 'ab{2,4}c', 'abc', 'abbc', 'abbbc', 'abbbbc', 'abbbbbc'],
-    [null, 'ab{0,2}c', 'ac', 'abc', 'abbc', 'abbbc', 'abbbbc', 'abbbbbc'],
+    [null, 'a', 2, 'a', 'b', '', 'aa', 'bb', 'ab'],
+    [null, 'ab|ac', 3, 'a', 'b', 'ab', 'ac', 'ba', 'ca', 'abc'],
+    [null, 'abc|def', 6, 'abc', 'def', 'ab', 'de', 'abf,abcd'],
+    [null, 'a|b|c', 2, 'a', 'b', 'c', '', 'ab', 'cc'],
+    [null, 'a|bc|d', 3, 'a', 'ad', 'bc', 'bd', 'abcd'],
+    [null, '(a|b)(c|d)', 3, 'a', 'ad', 'bc', 'bd', 'abcd'],
+    [null, 'aa*b', 3, 'a', 'ab', 'aab', 'aaab', 'b'],
+    [null, 'aa+b', 4, 'a', 'ab', 'aab', 'aaab', 'b'],
+    [null, 'aa?b', 4, 'a', 'ab', 'aab', 'aaab', 'b'],
+    [null, '[abc]+', 2, 'a', 'aa', 'ab', 'abc', 'd'],
+    ['abc', '[^ab]+b', 3, 'a', 'b', 'c', 'ab', 'bb', 'cb', 'ccb'],
+    ['a^', '\\^', 2, 'a', '^'],
+    ['a^', '[\\^]', 2, 'a', '^'],
+    ['ab^', '[a^]', 2, 'a', 'b', '^'],
+    ['ab^', '[^\\^a]+\\^', 3, 'a', 'b', '^', 'ab', 'bb', 'b^', 'bb^'],
+    [null, '[a-c]', 2, 'a', 'b', 'c', 'd'],
+    [null, '[a\\-c]', 2, 'a', 'b', 'c', 'd', '-'],
+    [null, '\\*|\\\\', 2, '*', '\\', '\\*', '\\\\*'],
+    ['abc', 'a.*b', 3, 'a', 'b', 'ab', 'aab', 'ac', 'acb', 'accb'],
+    [null, 'ab{3}c', 6, 'abc', 'abbc', 'abbbc', 'abbbbc', 'abbbbbc'],
+    [null, 'ab{2,}c', 5, 'abc', 'abbc', 'abbbc', 'abbbbc', 'abbbbbc'],
+    [null, 'ab{2,4}c', 7, 'abc', 'abbc', 'abbbc', 'abbbbc', 'abbbbbc'],
+    [null, 'ab{0,2}c', 5, 'ac', 'abc', 'abbc', 'abbbc', 'abbbbc', 'abbbbbc'],
+    [null, '[a-c]{2,}|(a+b)+', 3, 'a', 'b', 'ab', 'aabaab'],
 ]
 
 count = 0
@@ -134,7 +135,7 @@ function fail(message) {
     failcount++
 }
 
-function runCase(alphabet, pattern, examples) {
+function runCase(alphabet, pattern, expectedSize, examples) {
     console.log(`Running match ${pattern} on ${examples}`)
     let re = new RegExp(`^(${pattern})$`)
     let [dfa, turingMachine] = turingregex.compileExpression({
@@ -142,6 +143,9 @@ function runCase(alphabet, pattern, examples) {
         alphabet: alphabet,
         mode: 'match'
     })
+    if (dfa.length != expectedSize) {
+        fail(`Expected ${expectedSize} states but was ${dfa.length} for ${pattern}`)
+    }
     for (let example of examples) {
         let expected = re.test(example)
         let result = new TuringEmulator(turingMachine).run(example, 1000)
@@ -155,7 +159,7 @@ function runCase(alphabet, pattern, examples) {
 
 function runMatchCases() {
     for (let testcase of matchCases) {
-        runCase(testcase[0], testcase[1], testcase.slice(2))
+        runCase(testcase[0], testcase[1], testcase[2], testcase.slice(3))
     }
 }
 
@@ -204,14 +208,18 @@ function runContainsCases() {
 }
 
 findExpectedStepCounts = [
-    ['abc', '(a+b)+', 'abaaaaaaaaaaa', 31],
-    ['abc', '(a+b)+', 'ccaaaaaaaacab', 108],
-    ['abc', 'ca|(a+b)+', 'abaaaaaaaaaaa', 201],
+    ['abc', '(a+b)+', 'abaaaaaaaaaaa', 12, 31],
+    ['abc', '(a+b)+', 'ccaaaaaaaacab', 12, 108],
+    ['abc', 'ca|(a+b)+', 'abaaaaaaaaaaa', 16, 201],
 ]
 
-function testNumberOfStepsCase(alphabet, pattern, example, expectedSteps) {
+function testNumberOfStepsCase(alphabet, pattern, example, expectedStateCount, expectedSteps) {
     let expr = new turingregex.Expression(pattern, alphabet, null, null, 'find')
     let [dfa, turingMachine] = turingregex.compileExpression(expr)
+    if (turingMachine.states.length != expectedStateCount) {
+        fail(`Expected ${expectedStateCount} states but got ${turingMachine.states.length}`)
+    }
+
     var result = new TuringEmulator(turingMachine).run(example, 1000)
     assertResult(result, pattern, example, true, 'ab')
     console.log(`Running find ${pattern} on ${example} should take ${expectedSteps} steps...`)
@@ -223,7 +231,7 @@ function testNumberOfStepsCase(alphabet, pattern, example, expectedSteps) {
 function testNumberOfSteps() {
     for (let testcase of findExpectedStepCounts) {
         count++
-        testNumberOfStepsCase(testcase[0], testcase[1], testcase[2], testcase[3])
+        testNumberOfStepsCase(testcase[0], testcase[1], testcase[2], testcase[3], testcase[4])
     }
 }
 

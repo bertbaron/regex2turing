@@ -66,21 +66,13 @@ class NFAState {
 }
 
 class DFAState {
-    constructor(nfaStates) {
-        this.nfaStates = nfaStates
-        this.next = new Map()
+    constructor(isGoal) {
         this.id = -1
-        this.key = nfaStates
-            .map((s) => s.id)
-            .sort()
-            .join()
-        this.goal = nfaStates.filter((s) => s.isGoal()).length > 0
+        this.goal = isGoal
+        this.next = new Map()
     }
     addTransition(symbol, dfaState) {
         this.next.set(symbol, dfaState)
-    }
-    toString() {
-        return `${this.id} - ${this.key} - ${this.nfaStates}`
     }
     isGoal() {
         return this.goal
@@ -395,6 +387,18 @@ class Parser {
     }
 }
 
+class NFA2DFAState {
+    constructor(nfaStates) {
+        this.nfaStates = nfaStates
+        this.key = nfaStates
+            .map((s) => s.id)
+            .sort()
+            .join()
+        const isGoal = nfaStates.some((s) => s.isGoal())
+        this.dfaState = new DFAState(isGoal)
+    }
+}
+
 function nfaClosure(states) {
     let stateIds = new Set([])
     let todo = states.slice(0)
@@ -410,29 +414,29 @@ function nfaClosure(states) {
     return closure
 }
 
-function goTo(states, symbol) {
-    return nfaClosure(states.flatMap((state) => state.children.filter((child) => child.char == symbol)))
+function goTo(nfaStates, symbol) {
+    return nfaClosure(nfaStates.flatMap((state) => state.children.filter((child) => child.char == symbol)))
 }
 
 // returns the Set of symbols accepted by the given list of states
-function getSymbols(states) {
-    let childSet = states.flatMap((state) => state.children)
+function getSymbols(nfaStates) {
+    let childSet = nfaStates.flatMap((state) => state.children)
     return new Set(childSet.map((state) => state.char).filter((symbol) => symbol))
 }
 
-function nfa2dfaSub(dfaSet, dfa) {
-    dfaSet.push(dfa)
-    let symbols = getSymbols(dfa.nfaStates)
+function nfa2dfaSub(dfaSet, nfa2dfaState) {
+    dfaSet.push(nfa2dfaState)
+    let symbols = getSymbols(nfa2dfaState.nfaStates)
 
     for (let symbol of symbols) {
-        let targets = goTo(dfa.nfaStates, symbol)
-        let newState = new DFAState(targets)
+        let targets = goTo(nfa2dfaState.nfaStates, symbol)
+        let newState = new NFA2DFAState(targets)
         let existing = false
         for (let curState of dfaSet.filter((c) => c.key == newState.key)) {
             newState = curState
             existing = true
         }
-        dfa.addTransition(symbol, newState)
+        nfa2dfaState.dfaState.addTransition(symbol, newState.dfaState)
         if (!existing) {
             nfa2dfaSub(dfaSet, newState)
         }
@@ -442,63 +446,91 @@ function nfa2dfaSub(dfaSet, dfa) {
 function nfa2dfa(nfa) {
     let stateSet = nfaClosure([NFAState.lambda([nfa], false)])
     let dfa = []
-    nfa2dfaSub(dfa, new DFAState(stateSet))
+    nfa2dfaSub(dfa, new NFA2DFAState(stateSet))
     for (let i = 0; i < dfa.length; i++) {
-        dfa[i].id = i
+        dfa[i].dfaState.id = i
     }
-    return dfa
-}
-
-function makeDfaKey(dfaState) {
-    return (
-        Array.from(dfaState.next)
-            .map(([symbol, state]) => symbol + '.' + state.id)
-            .sort()
-            .join() + (dfaState.goal ? ':goal' : '')
-    )
+    return dfa.map((s) => s.dfaState)
 }
 
 function minimizeDfa(dfa) {
-    let newDfa = dfa.slice(0)
-    let states = new Map()
-    let changed = true
-    while (changed) {
-        changed = false
-        states.clear()
-        for (let state of newDfa) {
-            if (!state) continue
-            let key = makeDfaKey(state)
-            if (states.has(key)) {
-                target = newDfa[states.get(key)]
-                newDfa[state.id] = null
-                for (let s of newDfa.filter((s) => s)) {
-                    for (let [symbol, next] of s.next) {
-                        if (next == state) {
-                            s.next.set(symbol, target)
-                        }
-                    }
-                }
-                changed = true
-                break
-            } else {
-                states.set(key, state.id)
+    // remove unreachable states
+    let reachable = new Set([dfa[0]])
+    let todo = [dfa[0]]
+    while (todo.length > 0) {
+        let state = todo.pop()
+        for (let next of state.next.values()) {
+            if (!reachable.has(next)) {
+                reachable.add(next)
+                todo.push(next)
             }
         }
     }
-    newDfa = newDfa.filter((s) => s)
+    dfa = dfa.filter((s) => reachable.has(s))
 
-    // renumber states
-    for (let i = 0; i < newDfa.length; i++) {
-        newDfa[i].id = i
+    let partitions = [[], []]
+    for (let state of dfa) {
+        partitions[state.goal ? 1 : 0].push(state)
+    }
+    debug && console.log('Minimizing DFA')
+    changed = true
+    while (changed) {
+        debug && console.log(`  partitions: ${partitions.map((p) => p.map((s) => s.id).join(',')).join(' | ')}`)
+        changed = false
+        newPartitions = []
+        for (let partition of partitions) {
+            let partCopy = partition.slice(0)
+            while (partCopy.length > 0) {
+                let state = partCopy.shift()
+                let newPartition = [state]
+                for (let i = 0; i < partCopy.length; i++) {
+                    let other = partCopy[i]
+                    let same = true
+                    if (state.next.size != other.next.size) {
+                        same = false
+                    } else {
+                        for (let [symbol, next] of state.next) {
+                            // get the partition index of the next state in partitions
+                            let index = partitions.findIndex((p) => p.includes(next))
+                            let otherIndex = partitions.findIndex((p) => p.includes(other.next.get(symbol)))
+                            if (index != otherIndex) {
+                                same = false
+                                break
+                            }
+                        }
+                    }
+                    if (same) {
+                        newPartition.push(other)
+                        partCopy.splice(i, 1)
+                        i--
+                    }
+                }
+                newPartitions.push(newPartition)
+                if (partCopy.length > 0) {
+                    changed = true
+                }
+            }
+        }
+        partitions = newPartitions
     }
 
-    return newDfa
+    let newDfa = partitions.map((p) => new DFAState(p[0].isGoal()))
+    for (let i=0; i<partitions.length; i++) {
+        partition = partitions[i]
+        let newDfaState = newDfa[i]
+        newDfaState.id = i
+        for (let [symbol, next] of  partition[0].next) {
+            let index = partitions.findIndex((p) => p.includes(next))
+            newDfaState.addTransition(symbol, newDfa[index])
+        }
+    }
+    return newDfa    
 }
 
 function removeTransationsFromGoalStates(dfa) {
     // we should make a modified copy of the dfa, but we can get away with modifying the original for now
     for (let state of dfa) {
-        if (state.goal) {
+        if (state.isGoal()) {
             state.next.clear()
         }
     }
@@ -781,10 +813,11 @@ function compileExpression(expression) {
     debug && printNfa(nfa)
     let dfa = nfa2dfa(nfa)
     debug && printDfa('DFA', dfa)
-    // TODO if mode is 'contains', remove outgoing states from the accept states
+
+    // If mode is 'contains', remove outgoing states from the goal states to reduce the number of states
     if (expression.mode == 'contains') {
         dfa = removeTransationsFromGoalStates(dfa)
-        debug && printDfa('DFA without transitions from accept states', dfa)
+        debug && printDfa('DFA without transitions from goal states', dfa)
     }
 
     dfa = minimizeDfa(dfa)
@@ -894,6 +927,10 @@ function writeAsTuringMachineIo(turingMachine) {
 function writeAsGraphvizDFA(dfa) {
     out = `digraph {\n`
     out += `  rankdir=LR;\n`
+    if (dfa.length > 0) {
+        out += `  start [shape=plaintext, label=""];\n`
+        out += `  start -> ${dfa[0].id};\n`
+    }
     for (let state of dfa) {
         let suffix = state.isGoal() ? ' [shape=doublecircle]' : ' [shape=circle]'
         out += `  ${state.id}${suffix};\n`
