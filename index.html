@@ -17,12 +17,12 @@
 
         <!-- Global site tag (gtag.js) - Google Analytics -->
         <script async src="https://www.googletagmanager.com/gtag/js?id=G-QTDVGKLBCH"></script>
+        <!-- prettier-ignore -->
         <script>
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-          
-          gtag('config', 'G-QTDVGKLBCH'); 
+            window.dataLayer = window.dataLayer || [];
+            function gtag() {dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-QTDVGKLBCH');
         </script>
     </head>
 
@@ -33,7 +33,7 @@
         </div>
         <div class="container">
             <form action="#" onsubmit="compile();return false">
-                <div class="row g-3">
+                <div class="row gx-3 gy-2">
                     <label for="expression" class="col-md-2 col-form-label">Expression</label>
                     <div class="col-md-4">
                         <input type="text" class="form-control" id="expression" placeholder="expression" required />
@@ -54,7 +54,7 @@
                     <button type="button" class="btn-advanced col-auto" data-bs-toggle="collapse" data-bs-target="#advanced">Advanced</button>
                 </div>
                 <div id="advanced" class="collapse">
-                    <div class="row g-3">
+                    <div class="row gx-3 gy-2">
                         <label for="target" class="col-md-2 col-form-label">Target</label>
                         <div class="form-group col-md-4">
                             <div class="form-check">
@@ -99,7 +99,7 @@
                         </div>
                     </div>
                 </div>
-                <div class="row">
+                <div class="row mt-3">
                     <div class="col-12">
                         <button type="submit" class="btn btn-primary btn-success col-12">Compile</button>
                     </div>

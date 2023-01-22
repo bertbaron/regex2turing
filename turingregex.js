@@ -515,16 +515,16 @@ function minimizeDfa(dfa) {
     }
 
     let newDfa = partitions.map((p) => new DFAState(p[0].isGoal()))
-    for (let i=0; i<partitions.length; i++) {
+    for (let i = 0; i < partitions.length; i++) {
         partition = partitions[i]
         let newDfaState = newDfa[i]
         newDfaState.id = i
-        for (let [symbol, next] of  partition[0].next) {
+        for (let [symbol, next] of partition[0].next) {
             let index = partitions.findIndex((p) => p.includes(next))
             newDfaState.addTransition(symbol, newDfa[index])
         }
     }
-    return newDfa    
+    return newDfa
 }
 
 function removeTransationsFromGoalStates(dfa) {
@@ -555,7 +555,7 @@ function printNfa(nfa) {
     function sortId(id) {
         return id == nfa.id ? -9999 : id
     }
-    let stateNumbers = [...result.keys()].sort((a,b) => sortId(a) - sortId(b))
+    let stateNumbers = [...result.keys()].sort((a, b) => sortId(a) - sortId(b))
     console.log('NFA:')
     for (let state of stateNumbers) {
         let prefix = ' '.repeat(2 - state.toString().length)
@@ -794,7 +794,7 @@ function expandAlphabet(alphabet) {
     parser.tokenState = TOKENSTATE_CHARCLASS
     const cclass = parser.parseCharacterClass()
     let result = ''
-    for  (let child of cclass.children) {
+    for (let child of cclass.children) {
         result += child.char
     }
     return result
@@ -866,7 +866,7 @@ function writeAsTuringMachineIo(turingMachine) {
             let read = transition.read
             let write = transition.write == read ? 'KEEP' : transition.write
             let next = transition.next == state.name ? 'SELF' : transition.next
-            let move = transition.move == '<' ? 'L' : (transition.move == '>' ? 'R' : 'S')
+            let move = transition.move == '<' ? 'L' : transition.move == '>' ? 'R' : 'S'
             let key = `${write}--${move}--${next}`
             let value = optimized.get(key)
             if (value) {
@@ -888,7 +888,7 @@ function writeAsTuringMachineIo(turingMachine) {
         let longest_reads = 0
         for (let [key, value] of optimized) {
             let symbols = value.sort()
-            let reads = symbols.map(v => `${quoteNonAlphanumeric(v)}`).join(',')
+            let reads = symbols.map((v) => `${quoteNonAlphanumeric(v)}`).join(',')
             reads = symbols.length == 1 ? reads : `[${reads}]`
             longest_reads = Math.max(longest_reads, reads.length)
             // optimized.set(key, [reads[0], reads])
@@ -977,7 +977,7 @@ function writeAsGraphvizDFA(dfa) {
         let keys = Array.from(combined.keys()).sort()
         for (let next of keys) {
             let symbols = combined.get(next)
-            let label = symbols.map(v => `${v}`).join(',')
+            let label = symbols.map((v) => `${v}`).join(',')
             out += `  ${state.id} -> ${next} [label="${label}"];\n`
         }
     }
@@ -1013,23 +1013,23 @@ function compile() {
     let alphabet = document.getElementById('alphabet').value
     let accept = document.getElementById('accept').value
     let reject = document.getElementById('reject').value
-    const target = document.querySelector('input[name="target"]:checked').id;
-    const mode = document.querySelector('input[name="mode"]:checked').id;
-    const advanced = document.getElementById("advanced").classList.contains("show")
+    const target = document.querySelector('input[name="target"]:checked').id
+    const mode = document.querySelector('input[name="mode"]:checked').id
+    const advanced = document.getElementById('advanced').classList.contains('show')
 
     // Update the query parameters with the values of the input fields
     var url = new URL(window.location.href)
     url.search = ''
-    expression && url.searchParams.set("expression", expression)
-    alphabet && url.searchParams.set("alphabet", alphabet)
-    target && url.searchParams.set("target", target)
-    mode && url.searchParams.set("mode", mode)
-    accept && url.searchParams.set("accept", accept)
-    reject && url.searchParams.set("reject", reject)
-    advanced && url.searchParams.set("advanced", 'true')
+    expression && url.searchParams.set('expression', expression)
+    alphabet && url.searchParams.set('alphabet', alphabet)
+    target && url.searchParams.set('target', target)
+    mode && url.searchParams.set('mode', mode)
+    accept && url.searchParams.set('accept', accept)
+    reject && url.searchParams.set('reject', reject)
+    advanced && url.searchParams.set('advanced', 'true')
 
     // Update the URL in the browser
-    window.history.pushState({}, "", url.href)
+    window.history.pushState({}, '', url.href)
 
     let result = null
     try {
@@ -1073,11 +1073,11 @@ function copyToClipboard() {
     button.setAttribute('data-bs-original-title', 'Copied!')
     tooltip.update()
     tooltip.show()
-    setTimeout(function() {
+    setTimeout(function () {
         tooltip.hide()
         button.setAttribute('data-bs-original-title', 'Copy to clipboard')
         tooltip.update()
-    }, 3000);
+    }, 3000)
 }
 
 if (typeof module !== 'undefined') {
@@ -1162,44 +1162,44 @@ function runFromCLI() {
 function initPage() {
     var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
     var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
-        return new bootstrap.Tooltip(tooltipTriggerEl, {'delay': { show: 1000, hide: 200 }})
+        return new bootstrap.Tooltip(tooltipTriggerEl, { delay: { show: 1000, hide: 200 } })
     })
 
     // Get optional query parameters and initialize the form accordingly
-    var url = new URL(window.location.href);
+    var url = new URL(window.location.href)
 
-    var expression = url.searchParams.get("expression")
-    var alphabet = url.searchParams.get("alphabet")
-    var target = url.searchParams.get("target")
-    var mode = url.searchParams.get("mode")
-    var accept = url.searchParams.get("accept")
-    var reject = url.searchParams.get("reject")
-    var advanced = url.searchParams.get("advanced")
+    var expression = url.searchParams.get('expression')
+    var alphabet = url.searchParams.get('alphabet')
+    var target = url.searchParams.get('target')
+    var mode = url.searchParams.get('mode')
+    var accept = url.searchParams.get('accept')
+    var reject = url.searchParams.get('reject')
+    var advanced = url.searchParams.get('advanced')
 
     if (expression) {
-        document.getElementById("expression").value = expression
+        document.getElementById('expression').value = expression
     }
     if (alphabet) {
-        document.getElementById("alphabet").value = alphabet
+        document.getElementById('alphabet').value = alphabet
     }
     if (target) {
-        document.getElementById("turingmachinesimulator.com").checked = target === 'turingmachinesimulator.com'
-        document.getElementById("turingmachine.io").checked = target === 'turingmachine.io'
-        document.getElementById("dfa").checked = target === 'dfa'
+        document.getElementById('turingmachinesimulator.com').checked = target === 'turingmachinesimulator.com'
+        document.getElementById('turingmachine.io').checked = target === 'turingmachine.io'
+        document.getElementById('dfa').checked = target === 'dfa'
     }
     if (mode) {
-        document.getElementById("match").checked = mode === 'match'
-        document.getElementById("contains").checked = mode === 'contains'
-        document.getElementById("find").checked = mode === 'find'
+        document.getElementById('match').checked = mode === 'match'
+        document.getElementById('contains').checked = mode === 'contains'
+        document.getElementById('find').checked = mode === 'find'
     }
     if (accept) {
-        document.getElementById("accept").value = accept
+        document.getElementById('accept').value = accept
     }
     if (reject) {
-        document.getElementById("accept").value = accept
+        document.getElementById('accept').value = accept
     }
-    if (advanced === "true") {
-        document.getElementById("advanced").classList.add('show')
+    if (advanced === 'true') {
+        document.getElementById('advanced').classList.add('show')
     }
 
     if (expression) {
@@ -1210,14 +1210,6 @@ function initPage() {
 if (typeof process == 'undefined') {
     console.log('turingregex running from browser')
     window.onload = initPage
-    // $(function () {
-    //     $('[data-bs-toggle="tooltip"]').tooltip({'delay': { show: 1000, hide: 200 }})
-        // var dropdownMenu = document.getElementById('targetDropdown')
-        // var dropdownButton = document.getElementById('targetDropdownButton')
-        // dropdownMenu.addEventListener('click', function(event) {
-        //     dropdownButton.innerHTML = event.target.innerHTML.trim()
-        // })
-    // })
 } else {
     if (process.argv[1].endsWith('turingregex.js')) {
         console.log('turingregex running from console')
